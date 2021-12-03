@@ -1,0 +1,23 @@
+{
+  "name": "twitter-streaming-framework",
+  "version": "0.0.1",
+  "description": "TypeScript/Node.js framework for processing Twitter data stream.",
+  "scripts": {
+    "build": "rimraf build && tsc -b",
+    "copyright": "[ `find src -name \"*.[jt]s\" | wc -l` -eq `find src -name \"*.[jt]s\" -exec grep \"Copyright 2021 Twitter\" {} \\; | wc -l` ] || echo Error: Missing copyright header",
+    "clean": "rimraf build node_modules package-lock.json",
+    "watch": "rimraf build && tsc -b tsconfig.json -w"
+  },
+  "author": "Avner Braverman",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^16.11.4",
+    "@types/rimraf": "^3.0.2",
+    "rimraf": "^3.0.2",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.39.0"
+  }
+}
