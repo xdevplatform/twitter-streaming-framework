@@ -52,6 +52,10 @@ export function tweets(
 }
 
 export class ApiRouter extends HttpRouter {
+  constructor() {
+    super({ cors: true })
+  }
+
   @httpRouterMethod('GET', TRENDS_REGEX)
   public async trends(req: HttpRouterRequest) {
     const [brand, startTime, _, endTime] = req.params!

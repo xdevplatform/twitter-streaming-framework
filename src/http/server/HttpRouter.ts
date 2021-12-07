@@ -27,6 +27,10 @@ export interface HttpRouterResponse extends http.ServerResponse {
   respond(statusCode: number, responseBody: any): void
 }
 
+export interface HttpRouterOptions {
+  cors?: boolean
+}
+
 //
 // This class servers as a handler for HttpServer requests and routes different
 // requests to different handler methods. In order to do this, it uses attributes
@@ -39,7 +43,7 @@ export interface HttpRouterResponse extends http.ServerResponse {
 export abstract class HttpRouter implements HttpServerHandler {
   private routes: { filter: RegExp | string, funcname: string, method: string }[] = []
 
-  constructor() {
+  constructor(private readonly options: HttpRouterOptions = {}) {
     const funcnames = Object.getOwnPropertyNames(this.constructor.prototype)
     for (const funcname of funcnames) {
       const func = (this as any)[funcname]
@@ -67,6 +71,10 @@ export abstract class HttpRouter implements HttpServerHandler {
   }
 
   public onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const responseHeaders = this.options.cors
+      ? { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': '*' }
+      : {}
+
     const buffers: Buffer[] = []
     req.on('data', buffer => buffers.push(buffer))
 
@@ -88,6 +96,9 @@ export abstract class HttpRouter implements HttpServerHandler {
         res.statusCode = statusCode
         const isJSON = typeof responseBody === 'object'
         res.setHeader('Content-Type', isJSON ? 'application/json' : 'text/plain')
+        for (const [key, value] of Object.entries(responseHeaders)) {
+          res.setHeader(key, value)
+        }
         res.end(isJSON ? JSON.stringify(responseBody) : String(responseBody))
       }
 

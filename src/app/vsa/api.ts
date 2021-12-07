@@ -29,6 +29,10 @@ export async function search(
 }
 
 export class ApiRouter extends HttpRouter {
+  constructor() {
+    super({ cors: true })
+  }
+
   @httpRouterMethod('GET', SEARCH_REGEX)
   public async search(req: HttpRouterRequest) {
     const [brand, startTime, _, endTime] = req.params!
