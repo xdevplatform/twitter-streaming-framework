@@ -4,7 +4,14 @@
 import { Tweet } from './Tweet'
 import { Minutes } from '../util'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBHashKey, DynamoDBRangeKey, DynamoDBTable } from '../database'
+import {
+  DynamoDBHashKey,
+  DynamoDBRangeKey,
+  DynamoDBSearchResults,
+  DynamoDBTable,
+  DynamoDBTimedPrefixQueryFunction,
+  dynamodDBTimedPrefixSearch,
+} from '../database'
 
 export interface TwitterDynamoDBTweetRecord {
   imageUrl?: string
@@ -15,6 +22,17 @@ export interface TwitterDynamoDBTweetRecord {
   tweetType: string
   tweetUser: string
   tweetFull: string
+}
+
+export type TwitterDynamoDBPartialTweetRecord = {
+  imageUrl?: string
+  tweetId: string
+  tweetMedia?: string[]
+  tweetText: string
+  tweetTime: string
+  tweetType: string
+  tweetUser: string
+  tweetFull?: string
 }
 
 export class TwitterDynamoDBTweetTable extends DynamoDBTable {
@@ -41,4 +59,20 @@ export class TwitterDynamoDBTweetTable extends DynamoDBTable {
       },
     )
   }
+}
+
+export async function twitterDynamoDBTweetSearch(
+  startTime: string,
+  endTime: string | undefined,
+  full: boolean,
+  maxResults: number,
+  qf: DynamoDBTimedPrefixQueryFunction<TwitterDynamoDBTweetRecord>,
+): Promise<DynamoDBSearchResults<TwitterDynamoDBPartialTweetRecord>> {
+  const res = await dynamodDBTimedPrefixSearch(startTime, endTime, maxResults, qf)
+  return full
+    ? res
+    : {
+      nextStartTime: res.nextStartTime,
+      results: res.results.map(t => { const { tweetFull, ...rest } = t; return rest }),
+    }
 }

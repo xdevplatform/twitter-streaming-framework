@@ -21,6 +21,7 @@ export type HttpRouterRequestBody = Record<string, any> | string | undefined
 export interface HttpRouterRequest extends http.IncomingMessage {
   body: HttpRouterRequestBody
   params?: string[]
+  query?: Record<string, string>
 }
 
 export interface HttpRouterResponse extends http.ServerResponse {
@@ -102,13 +103,20 @@ export abstract class HttpRouter implements HttpServerHandler {
         res.end(isJSON ? JSON.stringify(responseBody) : String(responseBody))
       }
 
-      const match = this.resolve(req.method!, req.url!)
+      const parts = req.url?.split('?')
+      if (!Array.isArray(parts) || parts.length < 1 || 2 < parts.length) {
+        return respond(404, 'Not Found')
+      }
+
+      const match = this.resolve(req.method!, parts[0])
       if (!match) {
         return respond(404, 'Not Found')
       }
 
+      const query = parts.length === 2 ? querystring.parse(parts[1]) : undefined
+
       try {
-        const ret = (this as any)[match.funcname]({ ...req, body, params: match.params }, { ...res, respond })
+        const ret = (this as any)[match.funcname]({ ...req, body, params: match.params, query }, { ...res, respond })
         const out = ret instanceof Promise ? await ret : ret
         if (Array.isArray(out) && out.length === 2 && typeof out[0] === 'number') {
           respond(out[0], out[1])

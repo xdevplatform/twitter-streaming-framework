@@ -202,11 +202,13 @@ export interface DynamoDBSearchResults<T> {
   nextStartTime?: string
 }
 
+export type DynamoDBTimedPrefixQueryFunction<T> = (minute: Minutes) => Promise<T[] | undefined>
+
 export async function dynamodDBTimedPrefixSearch<T>(
   startTime: string,
   endTime: string | undefined,
   nearMaxResults: number,
-  qf: (minute: Minutes) => Promise<T[] | undefined>,
+  qf: DynamoDBTimedPrefixQueryFunction<T>,
 ): Promise<DynamoDBSearchResults<T>> {
   const startMinutes = new Minutes(startTime)
   const endMinutes = endTime ? new Minutes(endTime) : startMinutes.next()
