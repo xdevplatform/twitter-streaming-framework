@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
-import { assert, Minutes } from '../../util'
+import { assert, counters, Minutes } from '../../util'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import { DynamoDBTrendRecord, DynamoDBTrendsTable } from './DynamoDBTrendsTable'
 import { DynamoDBSearchResults, dynamodDBTimedPrefixSearch, getDynamoDBClient } from '../../database'
@@ -57,6 +57,7 @@ export class ApiRouter extends HttpRouter {
 
   @httpRouterMethod('GET', TRENDS_REGEX)
   public async trends(req: HttpRouterRequest) {
+    counters.info.requests.trends.inc()
     const [brand, startTime, _, endTime] = req.params!
     const ret = await trends(brand, startTime, endTime)
     return [200, ret]
@@ -64,6 +65,7 @@ export class ApiRouter extends HttpRouter {
 
   @httpRouterMethod('GET', TWEETS_REGEX)
   public async tweets(req: HttpRouterRequest) {
+    counters.info.requests.tweets.inc()
     const [brand, startTime, _, endTime] = req.params!
     const ret = await tweets(brand, startTime, endTime, req.query?.format?.toLocaleLowerCase() === 'full')
     return [200, ret]

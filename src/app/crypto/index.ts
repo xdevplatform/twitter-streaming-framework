@@ -5,7 +5,7 @@ import { ApiRouter } from './api'
 import * as config from './config'
 import { stream } from './streamer'
 import { HttpServer } from '../../http'
-import { getCommandLineOptions } from '../../util'
+import { counters, getCommandLineOptions } from '../../util'
 import { createDynamoDBTables, setTwitterStreamRules } from './setup'
 
 async function main(): Promise<void> {
@@ -17,6 +17,7 @@ async function main(): Promise<void> {
   })
 
   if (options.api) {
+    counters.monitor(config.PRINT_COUNTERS_INTERVAL_MS, config.PRINT_COUNTERS_LEVEL)
     const server = new HttpServer(new ApiRouter(), { port: config.API_PORT })
     server.start()
   } else if (options.setup) {
