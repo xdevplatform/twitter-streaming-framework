@@ -130,7 +130,7 @@ class Counters {
   }
 
   public monitor(interval: undefined /* never */ | 0 /* immediate */ | number, level: CountersLevel = 'info'): void {
-    if (interval === undefined) {
+    if (interval === undefined || process.stdout.isTTY !== true) {
       return
     }
     process.stdout.write('\x1b[?25l') // hide cursor
