@@ -18,7 +18,7 @@ export async function createDynamoDBTables() {
   console.log('Creating DynamoDB trends table:', trends.tableName)
   console.log('DynamoDB trends table ARN:', await trends.create())
 
-  const tweets = new TwitterDynamoDBTweetTable(client, config.TWEET_TABLE_NAME)
+  const tweets = new TwitterDynamoDBTweetTable(client, config.TWEET_TABLE_NAME, config.TWEET_TABLE_TTL)
   console.log('Creating DynamoDB tweet table:', tweets.tableName)
   console.log('DynamoDB tweet table ARN:', await tweets.create())
 }

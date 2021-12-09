@@ -9,7 +9,11 @@ import { DynamoDBSearchResults, dynamodDBTimedPrefixSearch, getDynamoDBClient } 
 import { TwitterDynamoDBPartialTweetRecord, TwitterDynamoDBTweetTable, twitterDynamoDBTweetSearch } from '../../twitter'
 
 const trendsTable = new DynamoDBTrendsTable(getDynamoDBClient(config.AWS_REGION), config.TRENDS_TABLE_NAME)
-const tweetTable = new TwitterDynamoDBTweetTable(getDynamoDBClient(config.AWS_REGION), config.TWEET_TABLE_NAME)
+const tweetTable = new TwitterDynamoDBTweetTable(
+  getDynamoDBClient(config.AWS_REGION),
+  config.TWEET_TABLE_NAME,
+  config.TWEET_TABLE_TTL,
+)
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)

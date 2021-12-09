@@ -17,7 +17,11 @@ import {
 } from '../../twitter'
 
 const trendsTable = new DynamoDBTrendsTable(getDynamoDBClient(config.AWS_REGION), config.TRENDS_TABLE_NAME)
-const tweetTable = new TwitterDynamoDBTweetTable(getDynamoDBClient(config.AWS_REGION), config.TWEET_TABLE_NAME)
+const tweetTable = new TwitterDynamoDBTweetTable(
+  getDynamoDBClient(config.AWS_REGION),
+  config.TWEET_TABLE_NAME,
+  config.TWEET_TABLE_TTL,
+)
 
 async function saveTweet(tweet: Tweet, coins: string[]): Promise<void> {
   for (const coin of coins) {

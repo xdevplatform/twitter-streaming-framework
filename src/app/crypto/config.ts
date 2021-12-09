@@ -4,6 +4,7 @@
 export const CONTROL_TABLE_NAME = 'twist-crypto-control'
 export const TRENDS_TABLE_NAME = 'twist-crypto-trends'
 export const TWEET_TABLE_NAME = 'twist-crypto-tweets'
+export const TWEET_TABLE_TTL = 7 * 24
 
 export const API_MAX_RESULTS = 500
 export const API_PORT = 4000
