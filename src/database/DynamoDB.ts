@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { KVStore } from './KVStore'
-import { Minutes, Obj, assert, counters } from '../util'
+import { Minutes, Obj, assert, assertInteger, counters, sleep } from '../util'
 import {
   AttributeValue,
   CreateTableCommand,
   CreateTableOutput,
+  DescribeTableCommand,
+  DescribeTableOutput,
   DynamoDBClient,
   PutItemCommand,
   QueryCommand,
+  UpdateTimeToLiveCommand,
 } from '@aws-sdk/client-dynamodb'
 
 const clients: Record<string, DynamoDBClient> = {}
@@ -49,6 +52,8 @@ export class DynamoDBRangeKey extends DynamoDBKey {
   }
 }
 
+const WAIT_TIME_FOR_TABLE_CREATION_SECONDS = 15
+
 //
 // A class for accessing DynamoDB tables. It manages the partition key
 // and search key and provides a method for creating the table in the
@@ -74,8 +79,21 @@ export abstract class DynamoDBTable {
     public readonly tableName: string,
     public readonly pkey: DynamoDBKey,
     public readonly skey: DynamoDBKey,
+    public readonly timeToLiveAttributeName?: string,
+    public readonly timeToLiveHours?: number,
   ) {
-    assert(typeof tableName === 'string' && /^[a-zA-Z_][\w\-]*$/.test(tableName), `Invalid table name: ${tableName}`)
+    const ident = /^[a-zA-Z_][\w\-]*$/
+    assert(typeof tableName === 'string' && ident.test(tableName), `Invalid table name: ${tableName}`)
+    if (timeToLiveAttributeName !== undefined) {
+      assert(
+        typeof timeToLiveAttributeName === 'string' && ident.test(timeToLiveAttributeName),
+        `Invalid time to live attribute name: ${timeToLiveAttributeName}`,
+      )
+    }
+    if (timeToLiveHours !== undefined) {
+      assert(timeToLiveAttributeName !== undefined, 'Time to live attribute name is undefined')
+      assertInteger(timeToLiveHours, 1, 24 * (365 * 5 - 1), `Invalid time to live: ${timeToLiveHours} hours`)
+    }
   }
 
   protected async doQuery<T extends Obj>(
@@ -105,12 +123,26 @@ export abstract class DynamoDBTable {
     )
   }
 
-  protected async doStore<T extends Obj>(pkey: string, skey: string, record: T): Promise<void> {
+  protected async doStore<T extends Obj>(
+    pkey: string,
+    skey: string,
+    record: T,
+    timeToLiveHours = this.timeToLiveHours,
+  ): Promise<void> {
+    assert(
+      this.timeToLiveAttributeName !== undefined || timeToLiveHours === undefined,
+      'Time to live specified but no attribute name given at construction',
+    )
     try {
       await this.client.send(
         new PutItemCommand({
           TableName: this.tableName,
-          Item: this.recordToItem({ ...record, [this.pkey.name]: pkey, [this.skey.name]: skey }),
+          Item: this.recordToItem({
+            ...record,
+            [this.pkey.name]: pkey,
+            [this.skey.name]: skey,
+            ...(timeToLiveHours ? { [this.timeToLiveAttributeName!]: Date.now() + timeToLiveHours * 3600000 } : {}),
+          }),
         })
       )
     } catch (e) {
@@ -164,6 +196,28 @@ export abstract class DynamoDBTable {
 
     const arn = res.TableDescription && res.TableDescription.TableArn
     assert(arn !== undefined, `Error creating DynamoDB table: ${this.tableName}`)
+
+    for (let i = WAIT_TIME_FOR_TABLE_CREATION_SECONDS; ; i--) {
+      assert(0 < i, `Waited too long for DynamoDB table to be created: ${this.tableName}`)
+      await sleep(1000)
+      const res: DescribeTableOutput = await this.client.send(new DescribeTableCommand({ TableName: this.tableName }))
+      assert(res.Table !== undefined, `Error getting DynamoDB table status: ${this.tableName}`)
+      if (res.Table!.TableStatus === 'ACTIVE') {
+        break
+      }
+      assert(res.Table!.TableStatus === 'CREATING', `Error creating DynamoDB table: ${this.tableName}`)
+    }
+
+    if (this.timeToLiveAttributeName !== undefined) {
+      await this.client.send(new UpdateTimeToLiveCommand({
+        TableName: this.tableName,
+        TimeToLiveSpecification: {
+          AttributeName: this.timeToLiveAttributeName,
+          Enabled: true,
+        },
+      }))
+    }
+
     return arn!
   }
 }
@@ -172,8 +226,15 @@ export abstract class DynamoDBTable {
 // A specialized type of DynamoDB table that behaves like a simple key-value store.
 //
 export class DynamoDBKVStore extends DynamoDBTable implements KVStore {
-  constructor(client: DynamoDBClient, tableName: string) {
-    super(client, tableName, new DynamoDBHashKey('pkey'), new DynamoDBRangeKey('skey'))
+  constructor(client: DynamoDBClient, tableName: string, timeToLiveAttributeName?: string, timeToLiveHours?: number) {
+    super(
+      client,
+      tableName,
+      new DynamoDBHashKey('pkey'),
+      new DynamoDBRangeKey('skey'),
+      timeToLiveAttributeName,
+      timeToLiveHours,
+    )
   }
 
   public async get(key: string): Promise<Obj | undefined> {
@@ -185,8 +246,8 @@ export class DynamoDBKVStore extends DynamoDBTable implements KVStore {
     return items && items![0]
   }
 
-  public async set(key: string, value: Obj): Promise<void> {
-    await this.doStore<Obj>('pkey', key, value)
+  public async set(key: string, value: Obj, timeToLiveHours?: number): Promise<void> {
+    await this.doStore<Obj>('pkey', key, value, timeToLiveHours)
   }
 }
 

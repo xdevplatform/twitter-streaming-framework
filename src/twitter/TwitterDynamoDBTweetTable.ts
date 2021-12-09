@@ -36,8 +36,15 @@ export type TwitterDynamoDBPartialTweetRecord = {
 }
 
 export class TwitterDynamoDBTweetTable extends DynamoDBTable {
-  constructor(client: DynamoDBClient, tableName: string) {
-    super(client, tableName, new DynamoDBHashKey('brand'), new DynamoDBRangeKey('uid'))
+  constructor(client: DynamoDBClient, tableName: string, timeToLiveHours?: number) {
+    super(
+      client,
+      tableName,
+      new DynamoDBHashKey('brand'),
+      new DynamoDBRangeKey('uid'),
+      timeToLiveHours === undefined ? undefined : 'expirationTime',
+      timeToLiveHours,
+    )
   }
 
   public async query(brand: string, minutes: Minutes): Promise<TwitterDynamoDBTweetRecord[] | undefined> {
