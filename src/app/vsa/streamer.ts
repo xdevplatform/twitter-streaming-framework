@@ -24,7 +24,8 @@ const visua = new Visua(config.VISUA_DEVELOPER_KEY, {
   waitTimeForDetectionMs: config.VISUA_WAIT_TIME,
 })
 
-const tweetTable = new TwitterDynamoDBTweetTable(getDynamoDBClient(config.AWS_REGION), config.TWEET_TABLE_NAME)
+const dynamodDBClient = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
+const tweetTable = new TwitterDynamoDBTweetTable(dynamodDBClient, config.TWEET_TABLE_NAME)
 
 async function saveTweet(tweet: Tweet, brands: string[]): Promise<void> {
   for (const brand of brands) {
@@ -68,7 +69,7 @@ export function stream(shouldBackfill = false) {
         heartbeatIntervalMs: config.HEARTBEAT_INTERVAL_MS,
         heartbeatMonitoringIntervalMs: config.PRINT_COUNTERS_INTERVAL_MS,
         heartbeatMonitoringLevel: config.PRINT_COUNTERS_LEVEL,
-        heartbeatStore: new DynamoDBKVStore(getDynamoDBClient(config.AWS_REGION), config.CONTROL_TABLE_NAME),
+        heartbeatStore: new DynamoDBKVStore(dynamodDBClient, config.CONTROL_TABLE_NAME),
         twitterAccount: new TwitterAccount(config.TWITTER_ACCOUNT, config.TWITTER_EMAIL, config.TWITTER_PASSWORD),
       }
   )

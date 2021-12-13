@@ -17,10 +17,10 @@ import {
 
 const clients: Record<string, DynamoDBClient> = {}
 
-export function getDynamoDBClient(region = 'us-east-1'): DynamoDBClient {
+export function getDynamoDBClient(region = 'us-east-1', endpoint?: string): DynamoDBClient {
   assert(typeof region === 'string' && /^[a-z]+(\-[a-z\d]+)+$/.test(region), `Invalid aws region: ${region}`)
   if (clients[region] === undefined) {
-    clients[region] = new DynamoDBClient({ region })
+    clients[region] = new DynamoDBClient({ region, ...( endpoint ? { endpoint } : {}) })
   }
   return clients[region]
 }

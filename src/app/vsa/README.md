@@ -18,11 +18,23 @@ stream Tweets. Configure the following environment variables with your Twitter P
 * `TWITTER_EMAIL`
 * `TWITTER_PASSWORD`
 
-This application uses the [AWS DynamodDB database](https://aws.amazon.com/dynamodb/) to store data. Make sure to
-setup AWS credentials in your environment variables or home directory. You may also set the environment variable
-`AWS_REGION` to use a region other than the default `us-east-1`.
+You will also need to configure your Visua developer key in the environment variable `VISUA_DEVELOPER_KEY`.
 
-Finally, configure your Visua developer key in the environment variable `VISUA_DEVELOPER_KEY`.
+### Using a cloud database
+
+This application uses the [AWS DynamodDB database](https://aws.amazon.com/dynamodb/) because it's easy to
+provision and easy to use. Make sure to setup AWS credentials in your environment variables or home
+directory. You may also set the environment variable `AWS_REGION` to use a region other than the
+default `us-east-1`.
+
+### Using a local database
+
+If you don't have easy access to an AWS account, you can use run a local version of the database. You can
+[download a run your own copy)[https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html]
+but the easiest way is probably to use docker: `docker run -p 8000:8000 amazon/dynamodb-local`.
+
+You will also need to add an environment variable `export AWS_DYNAMODB_ENDPOINT=http://localhost:8000/` or
+edit config.ts directly, to point the code at the local database.
 
 ## Build
 

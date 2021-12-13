@@ -7,6 +7,7 @@ export const TWEET_TABLE_NAME = 'twist-vsa-tweets'
 export const API_MAX_RESULTS = 500
 export const API_PORT = 4000
 export const AWS_REGION = process.env.AWS_REGION
+export const AWS_DYNAMODB_ENDPOINT = process.env.AWS_DYNAMODB_ENDPOINT
 export const EXPECTED_IMAGE_RATE = 100
 export const HEARTBEAT_INTERVAL_MS = 1000
 export const PRINT_COUNTERS_INTERVAL_MS: undefined /* never */ | 0 /* immediate */ | number = 500

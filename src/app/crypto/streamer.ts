@@ -16,12 +16,9 @@ import {
   TwitterStreamer,
 } from '../../twitter'
 
-const trendsTable = new DynamoDBTrendsTable(getDynamoDBClient(config.AWS_REGION), config.TRENDS_TABLE_NAME)
-const tweetTable = new TwitterDynamoDBTweetTable(
-  getDynamoDBClient(config.AWS_REGION),
-  config.TWEET_TABLE_NAME,
-  config.TWEET_TABLE_TTL,
-)
+const dynamodDBClient = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
+const trendsTable = new DynamoDBTrendsTable(dynamodDBClient, config.TRENDS_TABLE_NAME)
+const tweetTable = new TwitterDynamoDBTweetTable(dynamodDBClient, config.TWEET_TABLE_NAME, config.TWEET_TABLE_TTL)
 
 async function saveTweet(tweet: Tweet, coins: string[]): Promise<void> {
   for (const coin of coins) {
@@ -64,7 +61,7 @@ export function stream(shouldBackfill = false) {
         heartbeatIntervalMs: config.HEARTBEAT_INTERVAL_MS,
         heartbeatMonitoringIntervalMs: config.PRINT_COUNTERS_INTERVAL_MS,
         heartbeatMonitoringLevel: config.PRINT_COUNTERS_LEVEL,
-        heartbeatStore: new DynamoDBKVStore(getDynamoDBClient(config.AWS_REGION), config.CONTROL_TABLE_NAME),
+        heartbeatStore: new DynamoDBKVStore(dynamodDBClient, config.CONTROL_TABLE_NAME),
         twitterAccount: new TwitterAccount(config.TWITTER_ACCOUNT, config.TWITTER_EMAIL, config.TWITTER_PASSWORD),
       }
   )

@@ -7,7 +7,8 @@ import { DynamoDBSearchResults, getDynamoDBClient } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import { TwitterDynamoDBPartialTweetRecord, TwitterDynamoDBTweetTable, twitterDynamoDBTweetSearch } from '../../twitter'
 
-const tweetTable = new TwitterDynamoDBTweetTable(getDynamoDBClient(config.AWS_REGION), config.TWEET_TABLE_NAME)
+const dynamodDBClient = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
+const tweetTable = new TwitterDynamoDBTweetTable(dynamodDBClient, config.TWEET_TABLE_NAME)
 
 const BRAND_REGEX_STR = '[a-zA-Z]\\w+'
 const BRAND_REGEX = new RegExp(`^${BRAND_REGEX_STR}$`)

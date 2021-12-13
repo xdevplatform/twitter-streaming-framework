@@ -8,7 +8,7 @@ import { getDynamoDBClient, DynamoDBKVStore } from '../../database'
 import { TwitterAccount, TwitterDynamoDBTweetTable, TwitterStream } from '../../twitter'
 
 export async function createDynamoDBTables() {
-  const client = getDynamoDBClient(config.AWS_REGION)
+  const client = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
 
   const control = new DynamoDBKVStore(client, config.CONTROL_TABLE_NAME)
   console.log('Creating DynamoDB control table:', control.tableName)
