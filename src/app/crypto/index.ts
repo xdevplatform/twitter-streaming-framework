@@ -5,8 +5,8 @@ import { ApiRouter } from './api'
 import * as config from './config'
 import { stream } from './streamer'
 import { HttpServer } from '../../http'
+import { setTwitterStreamRules } from './setup'
 import { counters, getCommandLineOptions } from '../../util'
-import { createDynamoDBTables, setTwitterStreamRules } from './setup'
 
 async function main(): Promise<void> {
   const options = getCommandLineOptions({
@@ -22,7 +22,6 @@ async function main(): Promise<void> {
     server.start()
   } else if (options.setup) {
     await setTwitterStreamRules()
-    await createDynamoDBTables()
   } else if (options.stream) {
     stream(options.backfill)
   }

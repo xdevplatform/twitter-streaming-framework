@@ -3,52 +3,85 @@
 
 import * as config from './config'
 import { assert, counters, Minutes } from '../../util'
+import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
-import { DynamoDBTrendRecord, DynamoDBTrendsTable } from './DynamoDBTrendsTable'
-import { DynamoDBSearchResults, dynamodDBTimedPrefixSearch, getDynamoDBClient } from '../../database'
-import { TwitterDynamoDBPartialTweetRecord, TwitterDynamoDBTweetTable, twitterDynamoDBTweetSearch } from '../../twitter'
-
-const dynamodDBClient = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
-const trendsTable = new DynamoDBTrendsTable(dynamodDBClient, config.TRENDS_TABLE_NAME)
-const tweetTable = new TwitterDynamoDBTweetTable(dynamodDBClient, config.TWEET_TABLE_NAME, config.TWEET_TABLE_TTL)
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
-const TRENDS_REGEX = new RegExp(`^\/trends/(${COIN_REGEX_STR})\/(${Minutes.REGEX_STR})(\/(${Minutes.REGEX_STR}))?\/?$`)
-const TWEETS_REGEX = new RegExp(`^\/tweets/(${COIN_REGEX_STR})\/(${Minutes.REGEX_STR})(\/(${Minutes.REGEX_STR}))?\/?$`)
+const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(${Minutes.REGEX_STR})(\/(${Minutes.REGEX_STR}))?\/?$`)
 
-export interface TrendResult extends DynamoDBTrendRecord {
-  time: string
+interface Entry {
+  timestamp: string
+  coin: string
+  tweetIds: string[]
+  usdRate: number
 }
 
-export function trends(
-  coin: string,
-  startTime: string,
-  endTime?: string,
-): Promise<DynamoDBSearchResults<DynamoDBTrendRecord>> {
-  assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
-  const qf = async (minute: Minutes) => {
-    const res = await trendsTable.query(coin, minute)
-    return res?.map(record => {
-      const { coin, uid, ...data } = record as any
-      return { time: minute.toShortISOString(), ...data }
-    })
-  }
-  return dynamodDBTimedPrefixSearch(startTime, endTime, config.API_MAX_RESULTS, qf)
+interface ApiResults {
+  results: Entry[]
+  nextStartTime?: string
 }
 
-export function tweets(
-  coin: string,
-  startTime: string,
-  endTime?: string,
-  full = false,
-): Promise<DynamoDBSearchResults<TwitterDynamoDBPartialTweetRecord>> {
+const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
+
+export async function getHandler(coin: string, startTime: string, endTime?: string): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
-  const qf = async (minute: Minutes) => {
-    const res = await tweetTable.query(coin, minute)
-    return res?.map(record => { const { coin, uid, ...data } = record as any; return data })
+
+  const startMinutes = new Minutes(startTime)
+  const endMinutes = endTime ? new Minutes(endTime) : startMinutes.next()
+  assert(startMinutes.le(endMinutes), `End time: ${endTime} preceeds start time: ${startTime}`)
+  if (startMinutes.eq(endMinutes)) {
+    return { results: [] }
   }
-  return twitterDynamoDBTweetSearch(startTime, endTime, full, config.API_MAX_RESULTS, qf)
+
+  const res = await fos.listObjects(config.OBJECT_STORE_BUCKET_NAME)
+  if (res === undefined) {
+    return { results: [] }
+  }
+
+  const listings = (res as ObjectListing[])
+    .sort((a, b) => a.timeCreated - b.timeCreated)
+    .map(listing => ({ ...listing, minutes: new Minutes(listing.objectName) }))
+
+  let first: number | undefined
+  let last: number | undefined
+  let size = 0
+
+  for (let i = 0; i < listings.length; i++) {
+    const listing = listings[i]
+    if (listing.minutes.lt(startMinutes)) {
+      continue
+    }
+    if (first === undefined) {
+      first = i
+    }
+    if (config.API_MAX_RESPONSE_SIZE < size + listing.size || endMinutes.le(listing.minutes)) {
+      last = i
+      break
+    }
+    size += listing.size
+  }
+
+  if (first === last) {
+    return { results: [] }
+  }
+
+  if (last === undefined) {
+    last = listings.length
+  }
+
+  const results = await Promise.all(
+    listings
+      .slice(first, last)
+      .map(async listing => {
+        const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
+        return JSON.parse(buffer!.toString())
+      })
+  )
+
+  return last < listings.length && listings[last].minutes.lt(endMinutes)
+    ? { results, nextStartTime: listings[last].minutes.toShortISOString() }
+    : { results }
 }
 
 export class ApiRouter extends HttpRouter {
@@ -56,19 +89,11 @@ export class ApiRouter extends HttpRouter {
     super({ cors: true })
   }
 
-  @httpRouterMethod('GET', TRENDS_REGEX)
+  @httpRouterMethod('GET', URL_REGEX)
   public async trends(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
-    const [brand, startTime, _, endTime] = req.params!
-    const ret = await trends(brand, startTime, endTime)
-    return [200, ret]
-  }
-
-  @httpRouterMethod('GET', TWEETS_REGEX)
-  public async tweets(req: HttpRouterRequest) {
-    counters.info.requests.tweets.inc()
-    const [brand, startTime, _, endTime] = req.params!
-    const ret = await tweets(brand, startTime, endTime, req.query?.format?.toLocaleLowerCase() === 'full')
+    const [coin, startTime, _, endTime] = req.params!
+    const ret = await getHandler(coin, startTime, endTime)
     return [200, ret]
   }
 }

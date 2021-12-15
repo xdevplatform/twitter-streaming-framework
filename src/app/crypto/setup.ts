@@ -3,25 +3,7 @@
 
 import * as config from './config'
 import { createStreamRules } from './rules'
-import { DynamoDBTrendsTable } from './DynamoDBTrendsTable'
-import { getDynamoDBClient, DynamoDBKVStore } from '../../database'
-import { TwitterAccount, TwitterDynamoDBTweetTable, TwitterStream } from '../../twitter'
-
-export async function createDynamoDBTables() {
-  const client = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
-
-  const control = new DynamoDBKVStore(client, config.CONTROL_TABLE_NAME)
-  console.log('Creating DynamoDB control table:', control.tableName)
-  console.log('DynamoDB control table ARN:', await control.create())
-
-  const trends = new DynamoDBTrendsTable(client, config.TRENDS_TABLE_NAME)
-  console.log('Creating DynamoDB trends table:', trends.tableName)
-  console.log('DynamoDB trends table ARN:', await trends.create())
-
-  const tweets = new TwitterDynamoDBTweetTable(client, config.TWEET_TABLE_NAME, config.TWEET_TABLE_TTL)
-  console.log('Creating DynamoDB tweet table:', tweets.tableName)
-  console.log('DynamoDB tweet table ARN:', await tweets.create())
-}
+import { TwitterAccount, TwitterStream } from '../../twitter'
 
 export async function setTwitterStreamRules() {
   const twitterAccount = new TwitterAccount(

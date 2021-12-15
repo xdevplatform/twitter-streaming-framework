@@ -2,55 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
-import { counters } from '../../util'
+import { Minutes, counters } from '../../util'
 import { getLatestCoinToUSDRate } from './coins'
 import { createStreamProbabilities } from './rules'
-import { DynamoDBTrendsTable } from './DynamoDBTrendsTable'
-import { DynamoDBKVStore, getDynamoDBClient } from '../../database'
-import {
-  FakeTwitterStream,
-  StreamedTweet,
-  Tweet,
-  TwitterAccount,
-  TwitterDynamoDBTweetTable,
-  TwitterStreamer,
-} from '../../twitter'
+import { FilesystemObjectStore } from '../../database'
+import { FakeTwitterStream, StreamedTweet, TwitterAccount, TwitterStreamer } from '../../twitter'
 
-const dynamodDBClient = getDynamoDBClient(config.AWS_REGION, config.AWS_DYNAMODB_ENDPOINT)
-const trendsTable = new DynamoDBTrendsTable(dynamodDBClient, config.TRENDS_TABLE_NAME)
-const tweetTable = new TwitterDynamoDBTweetTable(dynamodDBClient, config.TWEET_TABLE_NAME, config.TWEET_TABLE_TTL)
-
-async function saveTweet(tweet: Tweet, coins: string[]): Promise<void> {
-  for (const coin of coins) {
-    counters.info.streamer.totalTweetWrites.inc()
-    counters.debug.streamer.activeTweetWrites.inc()
-    await tweetTable.store(coin, tweet)
-    counters.debug.streamer.activeTweetWrites.dec()
-  }
-}
-
+const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 let interval: NodeJS.Timeout
+let tweetIds: string[] = []
 
 async function onInterval() {
-  counters.info.streamer.totalTrendWrites.inc()
-  counters.debug.streamer.activeTrendWrites.inc()
-  const coin = 'bitcoin'
-  await trendsTable.store(
-    coin,
-    counters.info.streamer.tweetsInLastTrend.value,
-    await getLatestCoinToUSDRate(coin),
-  )
-  counters.info.streamer.tweetsInLastTrend.set(0)
-  counters.debug.streamer.activeTrendWrites.dec()
+  try {
+    counters.info.streamer.writes.inc()
+    counters.info.streamer.tweetsInBatch.set(0)
+    const coin = 'bitcoin'
+    const timestamp = (new Minutes()).toShortISOString()
+    const usdRate = await getLatestCoinToUSDRate(coin)
+    const payload = { timestamp, coin, tweetIds, usdRate }
+    tweetIds = []
+    await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
+  } catch (error) {
+    counters.warn.streamer.errors.inc()
+  }
 }
 
 function onStreamedTweet(streamedTweet: StreamedTweet): void {
   if (!interval) {
-    interval = setInterval(onInterval, config.TREND_INTERVAL)
+    interval = setInterval(onInterval, config.BATCH_INTERVAL)
   }
-  counters.info.streamer.tweetsInLastTrend.inc()
-  const { rules, ...tweet } = streamedTweet
-  saveTweet(tweet, rules)
+  counters.info.streamer.tweetsInBatch.inc()
+  tweetIds.push(streamedTweet.id)
 }
 
 export function stream(shouldBackfill = false) {
@@ -61,7 +43,6 @@ export function stream(shouldBackfill = false) {
         heartbeatIntervalMs: config.HEARTBEAT_INTERVAL_MS,
         heartbeatMonitoringIntervalMs: config.PRINT_COUNTERS_INTERVAL_MS,
         heartbeatMonitoringLevel: config.PRINT_COUNTERS_LEVEL,
-        heartbeatStore: new DynamoDBKVStore(dynamodDBClient, config.CONTROL_TABLE_NAME),
         twitterAccount: new TwitterAccount(config.TWITTER_ACCOUNT, config.TWITTER_EMAIL, config.TWITTER_PASSWORD),
       }
   )
