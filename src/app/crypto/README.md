@@ -14,7 +14,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed.
 
 This application uses Twitter's
 [PowerTrack API](https://developer.twitter.com/en/docs/twitter-api/enterprise/powertrack-api/overview) to
-stream Tweets. Configure the following environment variables with your Twitter Premium account credentials:
+stream Tweets. Configure the following environment variables with your Twitter Enterprise account credentials:
 
 * `TWITTER_ACCOUNT`
 * `TWITTER_EMAIL`

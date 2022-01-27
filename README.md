@@ -20,10 +20,12 @@ The `src/` directory contains the following folders:
 * **`util/`** useful helpers.
 
 Some of these folders (e.g. `http` and `twitter`) include an `examples` subfolder with specific examples
-for each package. In addition , the `src/app` direcotry includes a number of ETL+API sample applications:
+for each package. In addition , the `src/app` direcotry includes a number of sample applications:
 
-* **`vsa/`** a Visual Search API (VSA) for searching Tweets with logos or textual brand mentions.
-* **`crypto/`** a dashboard showing public conversation trends around various crypto coins.
+* [**crypto/**](src/app/crypto/README.md) a dashboard showing public conversation trends around various crypto coins.
+* [**twidl/**](src/app/twidl/README.md) a downloader tool for large batches of historic Tweets.
+* [**vsa/**](src/app/vsa/README.md) a Visual Search API (VSA) for searching Tweets with logos or textual
+brand mentions.
 
 ## Contact us
 
