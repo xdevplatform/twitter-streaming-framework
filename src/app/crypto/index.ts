@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   } else if (options.setup) {
     await setTwitterStreamRules()
   } else if (options.stream) {
-    stream(options.backfill)
+    stream(options.backfill !== undefined)
   }
 }
 

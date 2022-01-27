@@ -1,8 +1,10 @@
 // Copyright 2021 Twitter, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+export * from './file'
 export * from './time'
 export * from './assert'
+export * from './cursor'
 export * from './string'
 export * from './command'
 export * from './Printer'

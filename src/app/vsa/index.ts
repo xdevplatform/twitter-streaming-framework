@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     await setTwitterStreamRules()
     await createDynamoDBTables()
   } else if (options.stream) {
-    stream(options.backfill)
+    stream(options.backfill !== undefined)
   }
 }
 

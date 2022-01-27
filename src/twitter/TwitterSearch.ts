@@ -61,7 +61,7 @@ export class TwitterSearch extends TwitterBase {
     query: string,
     startTime: Date | string,
     endTime: Date | string,
-    tweetLoader: (tweets: any[]) => Promise<void>,
+    tweetLoader: (tweets: Tweet[]) => Promise<void>,
   ): Promise<void> {
     let next: string | undefined
     let loader: (() => Promise<void>) | undefined
@@ -92,7 +92,7 @@ export class TwitterSearch extends TwitterBase {
         ...(opts.next ? { next: opts.next } : {}),
       },
     )
-    return { tweets: (res.results || []).map((raw: any) => new Tweet(raw)), next: res.next }
+    return { tweets: (res.results || []).map((raw: any) => new Tweet(raw)).reverse(), next: res.next }
   }
 
   // Static ///////////////////////////////////////////////

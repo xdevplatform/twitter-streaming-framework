@@ -3,6 +3,7 @@
 
 import { Printer } from './Printer'
 import { assertInteger } from './assert'
+import { hideCursor, showCursor } from './cursor'
 import { SimpleEventDispatcher, SimpleEventListener } from './event'
 
 class CountersEvent {
@@ -133,7 +134,7 @@ class Counters {
     if (interval === undefined || process.stdout.isTTY !== true) {
       return
     }
-    process.stdout.write('\x1b[?25l') // hide cursor
+    hideCursor()
 
     if (interval === 0) {
       counters.addUpdateListener(() => this.print(level))
@@ -142,7 +143,8 @@ class Counters {
       setInterval(() => this.print(level), interval)
     }
     function onExit() {
-      process.stdout.write('\x1b[?25h\n') // show cursor
+      showCursor()
+      console.log()
       process.exit(0)
     }
     process.on('exit', onExit)
