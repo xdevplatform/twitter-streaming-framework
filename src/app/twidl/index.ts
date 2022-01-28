@@ -78,7 +78,8 @@ async function downloadTweets(
       `Last Tweet time: ${tweets[tweets.length - 1].date.toISOString()}\r\x1b[A`
     )
   })
-  process.stdout.write('\n\n\n')
+
+  console.log(`Downloading: ${progressBarString(count, count)} (${total} / ${count})\nDone.${' '.repeat(36)}`)
 }
 
 async function countTweets(twitter: TwitterSearch, query: string, startTime: Date, endTime: Date): Promise<number> {
@@ -130,8 +131,17 @@ async function main(): Promise<void> {
   const options = getOptions()
 
   const count = await countTweets(twitter, options.query, options.start, options.end)
+
   if (options.count === undefined) {
+    function onExit() {
+      showCursor()
+      console.log('\n')
+      process.exit(0)
+    }
+    process.on('SIGINT', onExit)
+    process.on('SIGTERM', onExit)
     hideCursor()
+
     try {
       await downloadTweets(twitter, options.csv, options.query, options.start, options.end, count)
     } finally {
