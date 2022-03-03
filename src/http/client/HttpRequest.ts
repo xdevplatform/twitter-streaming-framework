@@ -109,7 +109,7 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
           if (!code) {
             const responseText: string = buffers.join('').trim()
             let responseBody: Obj | undefined
-            if (res.headers['content-type'].startsWith('application/json')) {
+            if ((res.headers['content-type'] || '').startsWith('application/json')) {
               try {
                 responseBody = JSON.parse(responseText)
               } catch (e: any) {
