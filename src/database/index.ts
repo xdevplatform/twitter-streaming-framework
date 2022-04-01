@@ -4,6 +4,7 @@
 export * from './CsvFile'
 export * from './DynamoDB'
 export * from './FilesystemObjectStore'
+export * from './JsonFile'
 export * from './KVStore'
 export * from './ObjectStore'
 export * from './Tabular'

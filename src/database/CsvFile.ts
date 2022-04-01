@@ -27,7 +27,10 @@ export class CsvFile extends Tabular {
     return this.escape(originalFieldName)
   }
 
-  public async init(): Promise<void> {
+  public async close(): Promise<void> {
+  }
+
+  public async open(): Promise<void> {
     if (!(await exists(this.filename))) {
       await fs.writeFile(this.filename, this.transformedFieldNames.join(',') + '\n')
     }

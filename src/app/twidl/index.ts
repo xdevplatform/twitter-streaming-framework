@@ -3,6 +3,7 @@
 
 import * as config from './config'
 import { CsvFile } from '../../database'
+import { JsonFile } from '../../database'
 import { Tweet, TwitterAccount, TwitterSearch } from '../../twitter'
 import { assert, getCommandLineOptions, hideCursor, showCursor } from '../../util'
 
@@ -59,25 +60,53 @@ function progressBarString(complete: number, total: number): string {
 
 async function downloadTweets(
   twitter: TwitterSearch,
-  filename: string,
   query: string,
   startTime: Date,
   endTime: Date,
   count: number,
+  filenames: { csv?: string, json?: string },
 ): Promise<void> {
-  const fields = Object.keys(transformTweet())
-  const csv = new CsvFile(filename, fields, { allowEmptyFields: true, ignoreUnrecognizedFields: false })
-  await csv.init()
+
+  const csv = await (async () => {
+    if (!filenames.csv) {
+      return
+    }
+    const fields = Object.keys(transformTweet())
+    const csv = new CsvFile(filenames.csv, fields, { allowEmptyFields: true, ignoreUnrecognizedFields: false })
+    await csv.open()
+    return csv
+  })()
+
+  const json = await (async () => {
+    if (!filenames.json) {
+      return
+    }
+    const json = new JsonFile(filenames.json)
+    await json.open()
+    return json
+  })()
 
   let total = 0
   await twitter.download(query, startTime, endTime, async (tweets: Tweet[]) => {
-    await csv.appendArray(tweets.map(transformTweet))
+    if (csv) {
+      await csv.appendArray(tweets.map(transformTweet))
+    }
+    if (json) {
+      await json.appendArray(tweets.map(tweet => tweet.full))
+    }
     total += tweets.length
     process.stdout.write(
       `Downloading: ${progressBarString(total, count)} (${total} / ${count})\n` +
       `Last Tweet time: ${tweets[tweets.length - 1].date.toISOString()}\r\x1b[A`
     )
   })
+
+  if (csv) {
+    await csv.close()
+  }
+  if (json) {
+    await json.close()
+  }
 
   console.log(`Downloading: ${progressBarString(count, count)} (${total} / ${count})\nDone.${' '.repeat(36)}`)
 }
@@ -100,13 +129,18 @@ function getOptions() {
     csv: {
       description: 'Target CSV filename',
       argument: 'filename',
-      required: true,
+      required: false,
     },
     end: {
       description: 'End time (exclusive) in ISO 8601/RFC 3339 format (YYYY-MM-DDTHH:mm:ssZ)',
       argument: 'time',
       required: true,
       parser: dateParser,
+    },
+    json: {
+      description: 'Target JSON filename',
+      argument: 'filename',
+      required: false,
     },
     query: {
       description: 'Twitter enterprise search query',
@@ -132,7 +166,7 @@ async function main(): Promise<void> {
 
   const count = await countTweets(twitter, options.query, options.start, options.end)
 
-  if (options.count === undefined) {
+  if (options.csv !== undefined || options.json !== undefined) {
     function onExit() {
       showCursor()
       console.log('\n')
@@ -143,7 +177,14 @@ async function main(): Promise<void> {
     hideCursor()
 
     try {
-      await downloadTweets(twitter, options.csv, options.query, options.start, options.end, count)
+      await downloadTweets(
+        twitter,
+        options.query,
+        options.start,
+        options.end,
+        count,
+        { csv: options.csv, json: options.json },
+      )
     } finally {
       showCursor()
     }
