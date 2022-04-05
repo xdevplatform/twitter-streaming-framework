@@ -74,5 +74,8 @@ function getMediaLink(media: Obj): string {
 
   const variants = [...media.video_info.variants] as Obj[]
   variants.sort((x: Obj, y: Obj) => (x.bitrate || 0) < (y.bitrate || 0) ? 1 : -1)
-  return variants[0].url
+
+  const url = variants[0].url
+  const index = url.indexOf('?')
+  return 0 < index ? url.substring(0, index) : url
 }
