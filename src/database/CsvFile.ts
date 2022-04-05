@@ -19,7 +19,7 @@ export class CsvFile extends Tabular {
     if (value === undefined && this.allowEmptyFields) {
       return ''
     }
-    const str = String(value).trim()
+    const str = String(value).trim().replace(/\n/g, ' ')
     return str.includes('"') || str.includes(',') ? `"${str.replace(/"/g, '""')}"` : str
   }
 
