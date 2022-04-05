@@ -44,6 +44,9 @@ function getTweetType(full: Obj): TweetType {
 }
 
 function getMediaObjects(full: Obj): { media_url: string }[] {
+  if (full.extended_entities && full.extended_entities.media) {
+    return full.extended_entities.media
+  }
   if (full.entities.media) {
     return full.entities.media
   }
