@@ -5,49 +5,131 @@ import * as config from './config'
 import { CsvFile } from '../../database'
 import { JsonFile } from '../../database'
 import { Tweet, TwitterAccount, TwitterSearch } from '../../twitter'
-import { assert, getCommandLineOptions, hideCursor, showCursor } from '../../util'
+import { Obj, assert, getCommandLineOptions, hideCursor, showCursor } from '../../util'
 
 function transformTweet(tweet?: Tweet): Record<string, string> {
-  const guard = (val?: string): string => tweet && val !== undefined ? val : ''
-
-  // const place = tweet?.full.place
-  // const coordinates = tweet?.full.coordinates
-  // const user = tweet?.full.user
-  // const link = (id?: string) => id ? `https://twitter.com/twitter/status/${id}` : ''
+  const guard = (val?: string): string => tweet && val !== undefined && val !== null ? val : ''
 
   return {
     ID: guard(tweet?.id),
-    Date: guard(tweet?.date.toISOString()),
-    Language: guard(tweet?.full.lang),
-    // Link: guard(link(tweet?.id)),
-    // Media: guard(tweet?.media.join(';')),
+    Created_At: guard(tweet?.date.toISOString()),
+    Lang: guard(tweet?.full.lang),
     Text: guard(tweet?.text.replace(/\s/g, ' ')),
     Type: guard(tweet?.type),
-
-    // Location_Country: guard(place?.country),
-    // Location_Name: guard(place?.full_name),
-    // Location_Coordinates: guard(coordinates && coordinates.coordinates && coordinates.coordinates.join(';') || ''),
 
     Like_Count: guard(tweet?.full.favorite_count),
     Retweet_Count: guard(tweet?.full.retweet_count),
     Quote_Count: guard(tweet?.full.quote_count),
     Reply_Count: guard(tweet?.full.reply_count),
 
-    // In_Reply_To_Tweet_ID: guard(tweet?.full.in_reply_to_status_id_str),
-    // In_Reply_To_Tweet_Link: guard(link(tweet?.full.in_reply_to_status_id_str)),
+    User_ID: guard(tweet?.full.user.id_str),
+  }
+}
 
-    Author: guard(tweet?.user),
-    // Author_Creation_Date: user ? (new Date(user.created_at)).toISOString() : '',
-    // Author_Tweet_Count: guard(user?.statuses_count),
-    // Author_Location_Country_Code:
-    //   guard(user?.derived && user?.derived.locations && user?.derived.locations[0].country_code || ''),
-    // Author_Location_Region:
-    //   guard(user?.derived && user?.derived.locations && user?.derived.locations[0].region || ''),
-    // Author_Location_Full_Name:
-    //   guard(user?.derived && user?.derived.locations && user?.derived.locations[0].full_name || ''),
-    // Author_Is_Verified: guard(user?.verified),
-    // Author_Follower_Count: guard(user?.followers_count),
-    // Author_Following_Count: guard(user?.friends_count),
+function transformTweetWide(tweet?: Tweet): Record<string, string> {
+  const guard = (val?: string): string => tweet && val !== undefined && val !== null ? val : ''
+
+  const array = (arr?: string[]): string =>
+    tweet && arr !== undefined && arr !== null && 0 < arr.length ? JSON.stringify(arr) : ''
+
+  const media = tweet?.media
+  let video: string | undefined
+  let images: string[] = []
+  if (media) {
+    for (const url of media) {
+      if (url.endsWith('mp4')) {
+        video = url
+      } else {
+        images.push(url)
+      }
+    }
+  }
+
+  const place = tweet?.full.place
+  const coordinates = tweet?.full.coordinates
+  const user = tweet?.full.user
+  const derived = user?.derived
+
+  return {
+    ID: guard(tweet?.id),
+    Created_At: guard(tweet?.date.toISOString()),
+    Lang: guard(tweet?.full.lang),
+    Text: guard(tweet?.text.replace(/\s/g, ' ')),
+    Type: guard(tweet?.type),
+    Source: guard(tweet?.full.source),
+    Withheld_Copyright: guard(tweet?.full.withheld_copyright),
+    Withheld_In_Countries: guard(tweet?.full.withheld_in_countries ? tweet?.full.withheld_in_countries.join(';') : ''),
+
+    Image1: guard(images[0]),
+    Image2: guard(images[1]),
+    Image3: guard(images[2]),
+    Image4: guard(images[3]),
+    Video: guard(video),
+
+    Place_Country: guard(place?.country),
+    Place_Country_Code: guard(place?.country_code),
+    Place_Full_Name: guard(place?.full_name),
+    Place_ID: guard(place?.id),
+    Place_Name: guard(place?.name),
+    Place_Type: guard(place?.place_type),
+    Place_URL: guard(place?.url),
+    Coordinates: array(coordinates && coordinates.coordinates && coordinates.coordinates),
+
+    Like_Count: guard(tweet?.full.favorite_count),
+    Retweet_Count: guard(tweet?.full.retweet_count),
+    Quote_Count: guard(tweet?.full.quote_count),
+    Reply_Count: guard(tweet?.full.reply_count),
+
+    In_Reply_To_Tweet_ID: guard(tweet?.full.in_reply_to_status_id_str),
+    In_Reply_To_User_ID: guard(tweet?.full.in_reply_to_user_id_str),
+    In_Reply_To_Screen_Name: guard(tweet?.full.in_reply_to_screen_name),
+
+    Quoted_Status_ID: guard(tweet?.full.quoted_status_id_str),
+    Quoted_Status_Created_At: guard(tweet?.full.quoted_status?.created_at),
+    Quoted_Status_Text: guard(tweet?.full.quoted_status?.full_text || tweet?.full.quoted_status?.text),
+    Quoted_Status_Permalink: guard(tweet?.full.quoted_status_permalink?.expanded),
+    Quoted_Status_User_ID: guard(tweet?.full.quoted_status?.user.id_str),
+    Quoted_Status_User_Name: guard(tweet?.full.quoted_status?.user.name),
+    Quoted_Status_User_Screen_Name: guard(tweet?.full.quoted_status?.user.screen_name),
+
+    Retweeted_Status_ID: guard(tweet?.full.retweeted_status?.id_str),
+    Retweeted_Status_Created_At: guard(tweet?.full.retweeted_status?.created_at),
+    Retweeted_Status_Text: guard(tweet?.full.retweeted_status?.full_text || tweet?.full.retweeted_status?.text),
+    Retweeted_Status_User_ID: guard(tweet?.full.retweeted_status?.user.id_str),
+    Retweeted_Status_User_Name: guard(tweet?.full.retweeted_status?.user.name),
+    Retweeted_Status_User_Screen_Name: guard(tweet?.full.retweeted_status?.user.screen_name),
+
+    User_ID: guard(tweet?.full.user.id_str),
+    User_Name: guard(tweet?.full.user.name),
+    User_Screen_Name: guard(tweet?.full.user.screen_name),
+    User_Created_At: guard(user && (new Date(user.created_at)).toISOString()),
+    User_Description: guard(tweet?.full.user.description),
+    User_Location: guard(user?.location),
+    User_Derived_Location_Country_Code: guard(derived && derived.locations && derived.locations[0].country_code),
+    User_Derived_Location_Full_Name: guard(derived && derived.locations && derived.locations[0].full_name),
+    User_Derived_Location_Locality: guard(derived && derived.locations && derived.locations[0].locality),
+    User_Derived_Location_Region: guard(derived && derived.locations && derived.locations[0].region),
+    User_Derived_Location_Sub_Region: guard(derived && derived.locations && derived.locations[0].sub_region),
+    User_Is_Verified: guard(user?.verified),
+    User_Followers_Count: guard(user?.followers_count),
+    User_Friends_Count: guard(user?.friends_count),
+    User_Tweet_Count: guard(user?.statuses_count),
+
+    Hashtags: array(tweet?.full.entities.hashtags.map((o: Obj) => o.text)),
+    Mentions: array(tweet?.full.entities.user_mentions.map((o: Obj) => o.screen_name)),
+    Symbols: array(tweet?.full.entities.symbols.map((o: Obj) => o.text)),
+
+    Annotations: array(
+      tweet?.full.entities.annotations.context?.map((o: Obj) =>
+        `${o.context_domain_name}.${o.context_entity_name}(${o.context_domain_id_str}.${o.context_entity_id_str})`
+      )
+    ),
+
+    Named_Entity: array(
+      tweet?.full.entities.annotations.entity?.map((o: Obj) =>
+        `${o.type}.${o.normalized_text}(${o.probability})`
+      )
+    ),
 
     // JSON: tweet ? JSON.stringify(tweet?.full) : '',
   }
@@ -65,13 +147,14 @@ async function downloadTweets(
   endTime: Date,
   count: number,
   filenames: { csv?: string, json?: string },
+  flags: Record<string, boolean>,
 ): Promise<void> {
 
   const csv = await (async () => {
     if (!filenames.csv) {
       return
     }
-    const fields = Object.keys(transformTweet())
+    const fields = Object.keys(flags.wide ? transformTweetWide() : transformTweet())
     const csv = new CsvFile(filenames.csv, fields, { allowEmptyFields: true, ignoreUnrecognizedFields: false })
     await csv.open()
     return csv
@@ -89,7 +172,7 @@ async function downloadTweets(
   let total = 0
   await twitter.download(query, startTime, endTime, async (tweets: Tweet[]) => {
     if (csv) {
-      await csv.appendArray(tweets.map(transformTweet))
+      await csv.appendArray(tweets.map(flags.wide ? transformTweetWide : transformTweet))
     }
     if (json) {
       await json.appendArray(tweets.map(tweet => tweet.full))
@@ -153,6 +236,7 @@ function getOptions() {
       required: true,
       parser: dateParser,
     },
+    wide: 'Write more columns to CSV output',
   })
 }
 
@@ -184,6 +268,7 @@ async function main(): Promise<void> {
         options.end,
         count,
         { csv: options.csv, json: options.json },
+        { wide: options.wide === undefined ? false : true },
       )
     } finally {
       showCursor()
