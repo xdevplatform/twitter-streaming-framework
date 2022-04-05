@@ -23,7 +23,7 @@ export class Tweet {
     }
     this.id = full.id_str
     this.date = new Date(full.created_at)
-    this.media = getMediaObjects(full).map((obj: any) => obj.media_url)
+    this.media = getMediaObjects(full).map(getMediaLink)
     this.text = full.extended_tweet ? full.extended_tweet.full_text : full.text
     this.type = getTweetType(full)
     this.user = full.user.screen_name
@@ -59,4 +59,20 @@ function getMediaObjects(full: Obj): { media_url: string }[] {
     }
   }
   return []
+}
+
+function getMediaLink(media: Obj): string {
+  if (
+    media.type !== 'video' ||
+    !media.video_info ||
+    !media.video_info.variants ||
+    !Array.isArray(media.video_info.variants) ||
+    media.video_info.variants.length === 0
+  ) {
+    return media.media_url
+  }
+
+  const variants = [...media.video_info.variants] as Obj[]
+  variants.sort((x: Obj, y: Obj) => (x.bitrate || 0) < (y.bitrate || 0) ? 1 : -1)
+  return variants[0].url
 }
