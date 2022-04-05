@@ -29,6 +29,10 @@ export class Visua {
     this.waitTimeForDetectionMs = waitTimeForDetectionMs || 30000
     assertInteger(this.waitTimeForDetectionMs, 0, 120000, 'Wait time for detetion')
 
+    // This code is designed to handle 1000 outgoing HTTP requests per second. Attempts
+    // to use the builtin HTTP clients failed miserably due to performance issue. For
+    // this reason we are using a custom massively parallel HTTP client here.
+    //
     const requestPoolOptions = {
       ...originalRequestPoolOptions,
       defaultRequestHeaders: {
