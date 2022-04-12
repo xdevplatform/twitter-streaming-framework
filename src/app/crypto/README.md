@@ -59,16 +59,10 @@ node build/app/crypto --api
 
 The API should now be available on `http://localhost:4000/`.
 
-You can now get Tweets with
+You can now get Tweets and dollar rates with
 
 ```
-curl http://localhost:4000/tweets/bitcoin/<start>(/<end>)?
-```
-
-and trends with
-
-```
-curl http://localhost:4000/trends/bitcoin/<start>(/<end>)?
+curl http://localhost:4000/bitcoin/<start>(/<end>)?
 ```
 
 where `<start>` and `<end>` are UTC timestamps in on-minute resolution in the form `yyyy-mm-ddThh:mm`.
