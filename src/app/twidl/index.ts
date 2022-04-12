@@ -208,7 +208,7 @@ function getOptions() {
   }
 
   return getCommandLineOptions({
-    count: 'Count matching Tweets without downloading',
+    count: 'Count matching Tweets without downloading (ignore --csv and --json)',
     csv: {
       description: 'Target CSV filename',
       argument: 'filename',
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
 
   const count = await countTweets(twitter, options.query, options.start, options.end)
 
-  if (options.csv !== undefined || options.json !== undefined) {
+  if ((options.csv !== undefined || options.json !== undefined) && options.count === undefined) {
     function onExit() {
       showCursor()
       console.log('\n')
