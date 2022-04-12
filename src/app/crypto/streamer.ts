@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
+import { Converseon } from './converseon'
 import { Minutes, counters } from '../../util'
 import { getLatestCoinToUSDRate } from './coins'
 import { createStreamProbabilities } from './rules'
@@ -11,6 +12,8 @@ import { FakeTwitterStream, StreamedTweet, TwitterAccount, TwitterStreamer } fro
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 let interval: NodeJS.Timeout
 let streamedTweets: StreamedTweet[] = []
+
+const converseon = new Converseon(config.CONVERSEON_API_KEY)
 
 async function onInterval() {
   try {
@@ -22,9 +25,11 @@ async function onInterval() {
 
     const coin = 'bitcoin'
     const timestamp = (new Minutes()).toShortISOString()
-    const usdRate = await getLatestCoinToUSDRate(coin)
-    const payload = { timestamp, coin, tweetIds: tweets.map(tweet => tweet.id), usdRate }
-
+    const [usdRate, sentiments] = await Promise.all([
+      getLatestCoinToUSDRate(coin),
+      converseon.sentiment(tweets.map(tweet => tweet.text)),
+    ])
+    const payload = { timestamp, coin, tweetIds: tweets.map(tweet => tweet.id), sentiments, usdRate }
     await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
 
   } catch (error) {

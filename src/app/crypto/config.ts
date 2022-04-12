@@ -12,6 +12,8 @@ export const OBJECT_STORE_BUCKET_NAME = 'crypto'
 export const PRINT_COUNTERS_INTERVAL_MS: undefined /* never */ | 0 /* immediate */ | number = 500
 export const PRINT_COUNTERS_LEVEL = 'debug'
 
+export const CONVERSEON_API_KEY = process.env.CONVERSEON_API_KEY
+
 export const TWITTER_ACCOUNT = process.env.TWITTER_ACCOUNT
 export const TWITTER_EMAIL = process.env.TWITTER_EMAIL
 export const TWITTER_PASSWORD = process.env.TWITTER_PASSWORD
