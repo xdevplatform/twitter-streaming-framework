@@ -6,6 +6,7 @@ import https from 'https'
 import { URL } from 'url'
 import querystring from 'querystring'
 import { Obj, sleep } from '../../util'
+import { HttpMethod } from '../HttpProtocol'
 
 const TIMEOUT_MS = 5000
 
@@ -16,6 +17,7 @@ export interface HttpRequestOpts {
   body?: Obj | string
   headers?: http.OutgoingHttpHeaders
   keepalive?: boolean
+  method?: HttpMethod
   query?: Obj
   retry?: boolean
   retryInitialTimeout?: number
@@ -45,6 +47,7 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
   const qurl = url + (opts.query ? '?' + querystring.stringify(opts.query) : '')
 
   const options: http.RequestOptions = {
+    method: opts.method || 'GET',
     ...(opts.keepalive !== false ? { agent: isSecure ? httpsAgent : httpAgent } : {}),
     ...(opts.headers ? { headers: { ...opts.headers } } : ({} as http.OutgoingHttpHeaders))
   }
@@ -77,7 +80,7 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
           throw new Error(`Unsupported content type: ${contentType}`)
       }
       encoded = (new TextEncoder()).encode(body)
-      options.method = 'POST'
+      options.method = options.method || 'POST'
       options.headers!['Content-Type'] = contentType
       options.headers!['Content-Length'] = encoded.length
     }
