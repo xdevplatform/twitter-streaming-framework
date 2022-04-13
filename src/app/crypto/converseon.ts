@@ -10,29 +10,36 @@ export interface ConverseonSentiment {
   confidence: number
 }
 
-export class Converseon {
-  constructor(private key= '') {
-    assert(/^[0-9a-f]{32}$/.test(key), 'Invalid Converseon API key')
-  }
+const MAX_BATCH_SIZE = 50
 
-  public async sentiment(texts: string[]): Promise<ConverseonSentiment[]> {
-    const options: Record<string, any> = {
-      apiKey: this.key,
+export class Converseon {
+  private url: string
+
+  constructor(apiKey= '') {
+    assert(/^[0-9a-f]{32}$/.test(apiKey), 'Invalid Converseon API key')
+    const params: Record<string, any> = {
+      apiKey,
       coreEngineId: 17,
       'annotation.emotion': false,
       'annotation.intensity': false,
       'annotation.spam': false,
       'annotation.polarity': true,
     }
+    this.url = `https://conveyapi.conversus.ai/v2/process/?${querystring.stringify(params)}`
+  }
+
+  private async runSentimentBatch(texts: string[]): Promise<ConverseonSentiment[]> {
+    const body: Record<string, any> = {}
     for (let i = 0; i < texts.length; i++) {
-      options[`batch[${i}].id`] = i
-      options[`batch[${i}].text`] = texts[i]
+      body[`batch[${i}].id`] = i
+      body[`batch[${i}].text`] = texts[i]
     }
-    const res = await request(
-      `https://conveyapi.conversus.ai/v2/process/?${querystring.stringify(options)}`,
-      { method: 'POST' },
-    ) as Obj
-    assert(res && res.status && res.status.code === 200, 'Error sending request to Conversoen')
+    const raw = await request(this.url, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+    assert(
+      typeof(raw) === 'object' && raw && raw.status && raw.status.code === 200,
+      'Error sending request to Conversoen',
+    )
+    const res = raw as Obj
     assert(Array.isArray(res.documents), 'Error in Converseon response')
 
     const sentiments: ConverseonSentiment[] = []
@@ -40,5 +47,16 @@ export class Converseon {
       sentiments[parseInt(id)] = annotations.sentiment as ConverseonSentiment
     }
     return sentiments
+  }
+
+  public async sentiment(texts: string[]): Promise<ConverseonSentiment[]> {
+    const inputs: string[][] = []
+    while (MAX_BATCH_SIZE < texts.length) {
+      inputs.push(texts.splice(0, MAX_BATCH_SIZE))
+    }
+    inputs.push(texts)
+
+    const outputs = await Promise.all(inputs.map(input => this.runSentimentBatch(input)))
+    return ([] as ConverseonSentiment[]).concat(...outputs)
   }
 }
