@@ -10,18 +10,23 @@ import { FakeTwitterStream, StreamedTweet, TwitterAccount, TwitterStreamer } fro
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 let interval: NodeJS.Timeout
-let tweetIds: string[] = []
+let streamedTweets: StreamedTweet[] = []
 
 async function onInterval() {
   try {
     counters.info.streamer.writes.inc()
     counters.info.streamer.tweetsInBatch.set(0)
+
+    const tweets = streamedTweets
+    streamedTweets = []
+
     const coin = 'bitcoin'
     const timestamp = (new Minutes()).toShortISOString()
     const usdRate = await getLatestCoinToUSDRate(coin)
-    const payload = { timestamp, coin, tweetIds, usdRate }
-    tweetIds = []
+    const payload = { timestamp, coin, tweetIds: tweets.map(tweet => tweet.id), usdRate }
+
     await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
+
   } catch (error) {
     counters.warn.streamer.errors.inc()
   }
@@ -32,7 +37,7 @@ function onStreamedTweet(streamedTweet: StreamedTweet): void {
     interval = setInterval(onInterval, config.BATCH_INTERVAL)
   }
   counters.info.streamer.tweetsInBatch.inc()
-  tweetIds.push(streamedTweet.id)
+  streamedTweets.push(streamedTweet)
 }
 
 export function stream(shouldBackfill = false) {
