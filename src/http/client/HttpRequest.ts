@@ -47,7 +47,7 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
   const qurl = url + (opts.query ? '?' + querystring.stringify(opts.query) : '')
 
   const options: http.RequestOptions = {
-    method: opts.method || 'GET',
+    ...(opts.method ? { method: opts.method } : {}),
     ...(opts.keepalive !== false ? { agent: isSecure ? httpsAgent : httpAgent } : {}),
     ...(opts.headers ? { headers: { ...opts.headers } } : ({} as http.OutgoingHttpHeaders))
   }
