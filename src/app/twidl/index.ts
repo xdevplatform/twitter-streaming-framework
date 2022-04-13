@@ -120,13 +120,13 @@ function transformTweetWide(tweet?: Tweet): Record<string, string> {
     Symbols: array(tweet?.full.entities.symbols.map((o: Obj) => o.text)),
 
     Annotations: array(
-      tweet?.full.entities.annotations.context?.map((o: Obj) =>
+      tweet?.full.entities?.annotations?.context?.map((o: Obj) =>
         `${o.context_domain_name}.${o.context_entity_name}(${o.context_domain_id_str}.${o.context_entity_id_str})`
       )
     ),
 
     Named_Entity: array(
-      tweet?.full.entities.annotations.entity?.map((o: Obj) =>
+      tweet?.full.entities?.annotations?.entity?.map((o: Obj) =>
         `${o.type}.${o.normalized_text}(${o.probability})`
       )
     ),
