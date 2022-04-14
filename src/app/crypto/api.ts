@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
+import { ConverseonSentiment } from './converseon'
 import { assert, counters, Minutes } from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
@@ -23,6 +24,10 @@ interface ApiResults {
 }
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
+
+function computeTwitterRank(sentiments: ConverseonSentiment[]): number {
+  return 0
+}
 
 export async function getHandler(coin: string, startTime: string, endTime?: string): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
@@ -75,7 +80,9 @@ export async function getHandler(coin: string, startTime: string, endTime?: stri
       .slice(first, last)
       .map(async listing => {
         const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
-        return JSON.parse(buffer!.toString())
+        const { sentiments, ...result } = JSON.parse(buffer!.toString())
+        const twitterRank = computeTwitterRank(sentiments)
+        return { twitterRank, ...result }
       })
   )
 
