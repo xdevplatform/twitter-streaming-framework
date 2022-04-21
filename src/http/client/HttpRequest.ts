@@ -90,12 +90,13 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
       let timeout: NodeJS.Timeout | undefined
 
       if ((typeof opts.timeout === 'number' && 0 < opts.timeout) || opts.timeout === undefined) {
+        const timeoutMs = opts.timeout || TIMEOUT_MS
         timeout = setTimeout(() => {
           timeout = undefined
           if (!code) {
-            reject(new HttpRequestError('Request timeout', HttpRequestError.ETIMEOUT))
+            reject(new HttpRequestError(`Request timed out after ${timeoutMs} ms`, HttpRequestError.ETIMEOUT))
           }
-        }, opts.timeout || TIMEOUT_MS)
+        }, timeoutMs)
       }
 
       const req = (isSecure ? https : http).request(qurl, options, (res: any) => {
@@ -152,15 +153,18 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
   let timeout = opts.retryInitialTimeout || 1000
   let attempts = opts.retryMaxAttempts || 4
   let lastError: any
-  while (0 < attempts--) {
+  const start = Date.now()
+  for (let attempt = 0; ++attempt <= attempts;) {
     try {
       const res = await sendRequest() // must await to catch
       return res
     } catch (e: any) {
       lastError = e
       if (retry && (e.code === 429 || e.code === HttpRequestError.ETIMEOUT)) {
-        await sleep(timeout)
-        timeout *= 2
+        if (attempt < attempts) {
+          await sleep(timeout)
+          timeout *= 2
+        }
       } else if (retry && e.code == HttpRequestError.ESENDREQUEST) {
         // retry immediately
       } else {
@@ -169,5 +173,9 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
     }
   }
 
-  throw lastError!
+  const elapsed = Date.now() - start
+  throw new HttpRequestError(
+    `Request timed out after ${attempts} attempts and ${elapsed} ms (last error code was ${lastError.code})`,
+    HttpRequestError.ETIMEOUT,
+  )
 }
