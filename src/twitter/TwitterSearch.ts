@@ -19,7 +19,14 @@ export interface TwitterSearchResults {
 export class TwitterSearch extends TwitterBase {
 
   private async request(path: string, query?: Obj, body?: Obj): Promise<Obj> {
-    const opts = { query, body, headers: this.account.auth, timeout: 30000 }
+    const opts = {
+      query,
+      body,
+      headers: this.account.auth,
+      timeout: 30000,
+      retryInitialTimeout: 15000,
+      retryMaxAttempts: 7,
+    }
     const url = `https://gnip-api.twitter.com/search/fullarchive/accounts/${this.account.name}/${path}`
     const res = await request(url, opts)
     if (typeof res !== 'object') {
