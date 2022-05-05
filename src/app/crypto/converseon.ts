@@ -6,7 +6,7 @@ import querystring from 'querystring'
 import { Obj, assert } from '../../util'
 
 export interface ConverseonSentiment {
-  value: string
+  value: 'positive' | 'neutral' | 'negative'
   confidence: number
 }
 
@@ -34,10 +34,10 @@ export class Converseon {
       body[`batch[${i}].id`] = i
       body[`batch[${i}].text`] = texts[i]
     }
-    const raw = await request(this.url, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+    const raw = await request(this.url, { retry: true, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
     assert(
       typeof(raw) === 'object' && raw && raw.status && raw.status.code === 200,
-      'Error sending request to Conversoen',
+      'Error sending request to Converseon',
     )
     const res = raw as Obj
     assert(Array.isArray(res.documents), 'Error in Converseon response')

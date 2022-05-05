@@ -29,7 +29,7 @@ async function onInterval() {
       getLatestCoinToUSDRate(coin),
       converseon.sentiment(tweets.map(tweet => tweet.text)),
     ])
-    const payload = { timestamp, coin, tweetIds: tweets.map(tweet => tweet.id), sentiments, usdRate }
+    const payload = { timestamp, coin, tweets: tweets.map(({id, full: {user: {followers_count}}}, idx) => ({id, followers_count, sentiment: sentiments[idx]})), usdRate }
     await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
 
   } catch (error) {
