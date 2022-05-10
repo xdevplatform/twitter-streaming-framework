@@ -7,9 +7,7 @@
     "copyright": "[ `find src -name \"*.[jt]s\" | wc -l` -eq `find src -name \"*.[jt]s\" -exec grep \"Copyright 2021 Twitter\" {} \\; | wc -l` ] || echo Error: Missing copyright header",
     "clean": "rimraf build node_modules package-lock.json",
     "watch": "rimraf build && tsc -b tsconfig.json -w",
-    "crypto:setup": "node build/app/crypto --setup",
-    "crypto:stream": "node build/app/crypto --stream",
-    "crypto:api": "node build/app/crypto --api"
+    "crypto:start": "node build/app/crypto --stream --api"
   },
   "author": "Avner Braverman",
   "license": "Apache-2.0",

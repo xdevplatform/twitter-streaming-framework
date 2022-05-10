@@ -17,12 +17,16 @@ async function main(): Promise<void> {
   })
 
   if (options.api) {
+    console.info('Start API Server')
     counters.monitor(config.PRINT_COUNTERS_INTERVAL_MS, config.PRINT_COUNTERS_LEVEL)
     const server = new HttpServer(new ApiRouter(), { port: config.API_PORT })
     server.start()
-  } else if (options.setup) {
+  }
+  if (options.setup) {
     await setTwitterStreamRules()
-  } else if (options.stream) {
+  }
+  if (options.stream) {
+    console.info('Start Streaming Tweets')
     stream(options.backfill !== undefined)
   }
 }
