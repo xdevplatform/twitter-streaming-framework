@@ -6,6 +6,7 @@ import { ConverseonSentiment } from './converseon'
 import {assert, counters, Minutes, Obj} from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
+import mcache from 'memory-cache'
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
@@ -139,7 +140,14 @@ export class ApiRouter extends HttpRouter {
   public async trends(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
     const [coin, startTime, _, endTime] = req.params!
-    const ret = await getHandler(coin, startTime, endTime)
-    return [200, ret]
+    const cacheKey = `${coin}_${startTime}_${endTime}`
+    const cachedResponse = mcache.get(cacheKey)
+    if (cachedResponse) {
+      return [200, cachedResponse]
+    } else {
+      const ret = await getHandler(coin, startTime, endTime)
+      mcache.put(cacheKey, ret, 2 * 24 * 60 * 60 * 1000); // Keep for 2 days max
+      return [200, ret]
+    }
   }
 }

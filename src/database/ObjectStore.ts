@@ -18,7 +18,7 @@ export interface ObjectStore {
 }
 
 function isValidName(name: string): boolean {
-  return typeof name === 'string' && /^[\w\-\:\_\$]+$/.test(name)
+  return typeof name === 'string' && /^[.\w\-\:\_\$]+$/.test(name)
 }
 
 export function isValidBucketName(bucketName: string): boolean {

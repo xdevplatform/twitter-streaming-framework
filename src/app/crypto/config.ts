@@ -8,7 +8,7 @@ export const COIN_API_MAX_ATTEMPTS = 3
 export const EXPECTED_TWEET_RATE = 10
 export const HEARTBEAT_INTERVAL_MS = 1000
 export const OBJECT_STORE_BASE_PATH = '.'
-export const OBJECT_STORE_BUCKET_NAME = 'crypto'
+export const OBJECT_STORE_BUCKET_NAME = '.data'
 export const PRINT_COUNTERS_INTERVAL_MS: undefined /* never */ | 0 /* immediate */ | number = 500
 export const PRINT_COUNTERS_LEVEL = 'debug'
 

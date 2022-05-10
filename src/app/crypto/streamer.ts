@@ -33,6 +33,7 @@ async function onInterval() {
     await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
 
   } catch (error) {
+    console.log(error)
     counters.warn.streamer.errors.inc()
   }
 }
