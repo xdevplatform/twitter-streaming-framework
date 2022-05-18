@@ -20,7 +20,7 @@ interface Transaction {
   volume: number
 }
 
-async function getLatestCoinToUSDRateOnce(coin: 'bitcoin'): Promise<number> {
+async function getLatestCoinToUSDRateOnce(coin: string): Promise<number> {
   const res = await request(`https://api.coingecko.com/api/v3/coins/${coin}/tickers`)
   assert(
     typeof res === 'object' && Array.isArray(res.tickers) && 0 < res.tickers.length,
@@ -44,7 +44,7 @@ async function getLatestCoinToUSDRateOnce(coin: 'bitcoin'): Promise<number> {
   return Math.round(sum / vol)
 }
 
-export async function getLatestCoinToUSDRate(coin: 'bitcoin'): Promise<number> {
+export async function getLatestCoinToUSDRate(coin: string): Promise<number> {
   let error
   for (let attempts = 0; attempts < config.COIN_API_MAX_ATTEMPTS; attempts++) {
     try {

@@ -2,35 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
-import { Converseon } from './converseon'
-import { Minutes, counters } from '../../util'
-import { getLatestCoinToUSDRate } from './coins'
+import { counters } from '../../util'
 import { createStreamProbabilities } from './rules'
 import { FilesystemObjectStore } from '../../database'
 import { FakeTwitterStream, StreamedTweet, TwitterAccount, TwitterStreamer } from '../../twitter'
+import {getDataToStore} from "./utils";
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 let interval: NodeJS.Timeout
 let streamedTweets: StreamedTweet[] = []
-
-const converseon = new Converseon(config.CONVERSEON_API_KEY)
 
 async function onInterval() {
   try {
     counters.info.streamer.writes.inc()
     counters.info.streamer.tweetsInBatch.set(0)
 
-    const tweets = streamedTweets
-    streamedTweets = []
-
     const coin = 'bitcoin'
-    const timestamp = (new Minutes()).toShortISOString()
-    const [usdRate, sentiments] = await Promise.all([
-      getLatestCoinToUSDRate(coin),
-      converseon.sentiment(tweets.map(tweet => tweet.text)),
-    ])
-    const payload = { timestamp, coin, tweets: tweets.map(({id, full: {user: {followers_count}}}, idx) => ({id, followers_count, sentiment: sentiments[idx]})), usdRate }
-    await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, timestamp, Buffer.from(JSON.stringify(payload)))
+
+    const payload = await getDataToStore(streamedTweets, coin)
+
+    await fos.putObject(config.OBJECT_STORE_BUCKET_NAME, String(payload.timeMs), Buffer.from(JSON.stringify(payload)))
 
   } catch (error) {
     console.log(error)
