@@ -1,7 +1,7 @@
 // Copyright 2021 Twitter, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-export const API_MAX_RESPONSE_SIZE = 256 * 1024
+export const API_MAX_RESPONSE_SIZE = 512 * 1024
 export const API_PORT = 4000
 export const BATCH_INTERVAL = 60000
 export const COIN_API_MAX_ATTEMPTS = 3
@@ -13,6 +13,9 @@ export const PRINT_COUNTERS_INTERVAL_MS: undefined /* never */ | 0 /* immediate 
 export const PRINT_COUNTERS_LEVEL = 'debug'
 
 export const CONVERSEON_API_KEY = process.env.CONVERSEON_API_KEY
+export const AWS_REGION = process.env.AWS_REGION
+export const AWS_DYNAMODB_ENDPOINT = process.env.AWS_DYNAMODB_ENDPOINT
+export const CRYPTO_SENTIMENT_TABLE_NAME = process.env.CRYPTO_SENTIMENT_TABLE_NAME || 'crypto-sentiment'
 
 export const TWITTER_ACCOUNT = process.env.TWITTER_ACCOUNT
 export const TWITTER_EMAIL = process.env.TWITTER_EMAIL

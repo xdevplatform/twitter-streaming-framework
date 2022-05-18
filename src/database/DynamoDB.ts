@@ -108,6 +108,7 @@ export abstract class DynamoDBTable {
           ExpressionAttributeValues: values,
         })
       )
+
       assert(res !== undefined && res.Items !== undefined, 'No items')
       return res.Items!.map((item: Record<string, AttributeValue>) => this.itemToRecord(item))
     } catch (e) {
@@ -123,9 +124,16 @@ export abstract class DynamoDBTable {
     )
   }
 
+  protected async doQueryTimeRange<T extends Obj>(pkey: string, value1: string, value2: string): Promise<T[] | undefined> {
+    return this.doQuery<T>(
+        `${this.pkey.name} = :${this.pkey.name} AND ${this.skey.name} BETWEEN :${this.skey.name}_1 AND :${this.skey.name}_2`,
+        { [`:${this.pkey.name}`]: { S: pkey }, [`:${this.skey.name}_1`]: { N: value1 }, [`:${this.skey.name}_2`]: { N: value2 } },
+    )
+  }
+
   protected async doStore<T extends Obj>(
     pkey: string,
-    skey: string,
+    skey: string|number,
     record: T,
     timeToLiveHours = this.timeToLiveHours,
   ): Promise<void> {
@@ -146,6 +154,7 @@ export abstract class DynamoDBTable {
         })
       )
     } catch (e) {
+      console.log('\n\n\n\n'+e+'\n\n\n\n')
       counters.error.DynamoDB.writeErrors.inc()
       console.error(e)
     }
