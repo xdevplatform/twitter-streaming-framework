@@ -36,8 +36,9 @@ async function onInterval() {
     counters.info.streamer.tweetsInBatch.set(0)
 
     const coin = 'bitcoin'
-
-    const payload = await getDataToStore(streamedTweets, coin)
+    const tweets = streamedTweets
+    streamedTweets = []
+    const payload = await getDataToStore(tweets, coin)
     await saveSentimentResults(payload);
 
   } catch (error) {
