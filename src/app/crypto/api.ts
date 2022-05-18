@@ -10,18 +10,12 @@ import mcache from 'memory-cache'
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
-const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(${Minutes.REGEX_STR})(\/(${Minutes.REGEX_STR}))?\/?$`)
-
-type TweetStored = {
-  id: string;
-  followers_count: number;
-  sentiment: ConverseonSentiment;
-}
+const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
 
 interface Entry {
-  timestamp: string
+  timeMs: number
   coin: string
-  tweets: Array<TweetStored>
+  tweetIds: Array<string>
   usdRate: number
 }
 
@@ -32,50 +26,17 @@ interface ApiResults {
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 
-const scoreOptions = ['positive', 'neutral', 'negative', 'unknown']
+const FIVE_MIN = 1000 * 60 * 5
+const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN
 
-function computeTwitterRank(tweets: Array<TweetStored>): Obj {
-  const defaultValue = {sentiment: {positive: 0, neutral: 0, negative: 0, unknown: 0}, sentimentByFollowers: {positive: 0, neutral: 0, negative: 0, unknown: 0, totalFollowers: 0}}
-  if (!tweets || tweets.length === 0) {
-    return defaultValue
-  }
-  const ranks = tweets.reduce(({sentiment, sentimentByFollowers}, tweet) => {
-    const {sentiment: tweetSentiment, followers_count} = tweet
-    const value = tweetSentiment?.value || 'unknown'
-
-    return {
-      sentiment:{
-        ...sentiment,
-        [value]: sentiment[value] + 1,
-      },
-      sentimentByFollowers: {
-        ...sentimentByFollowers,
-        [value]: sentimentByFollowers[value] + followers_count,
-        totalFollowers: sentimentByFollowers.totalFollowers + followers_count,
-      }
-    }
-  }, defaultValue)
-
-  // @ts-ignore
-  const maxRank = (rankType: 'sentiment' | 'sentimentByFollowers') => (max: string, v: string) => ranks[rankType][max] > ranks[rankType][v] ? max : v
-  const score = scoreOptions.reduce(maxRank('sentiment'))
-  const scoreByFollowers = scoreOptions.reduce(maxRank('sentimentByFollowers'))
-
-  return {
-    ...ranks,
-    score,
-    scoreByFollowers
-  }
-
-}
-
-export async function getHandler(coin: string, startTime: string, endTime?: string): Promise<ApiResults> {
+export async function getHandler(coin: string, startTime: number, endTime?: number): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
 
-  const startMinutes = new Minutes(startTime)
-  const endMinutes = endTime ? new Minutes(endTime) : startMinutes.next()
-  assert(startMinutes.le(endMinutes), `End time: ${endTime} precedes start time: ${startTime}`)
-  if (startMinutes.eq(endMinutes)) {
+  const startTimestamp = startTime
+  const endTimestamp = endTime ? endTime : startTimestamp + 60 * 1000
+  assert(startTimestamp <= endTimestamp, `End time: ${endTime} precedes start time: ${startTime}`)
+  assert(endTimestamp - startTime < ONE_WEEK_MS, 'More than a week worth of data requested')
+  if (startTimestamp === endTimestamp) {
     return { results: [] }
   }
 
@@ -85,8 +46,7 @@ export async function getHandler(coin: string, startTime: string, endTime?: stri
   }
 
   const listings = (res as ObjectListing[])
-    .sort((a, b) => a.timeCreated - b.timeCreated)
-    .map(listing => ({ ...listing, minutes: new Minutes(listing.objectName) }))
+      .filter(listing => Number(listing.objectName) >= startTimestamp && Number(listing.objectName) <= endTimestamp)
 
   let first: number | undefined
   let last: number | undefined
@@ -94,13 +54,10 @@ export async function getHandler(coin: string, startTime: string, endTime?: stri
 
   for (let i = 0; i < listings.length; i++) {
     const listing = listings[i]
-    if (listing.minutes.lt(startMinutes)) {
-      continue
-    }
     if (first === undefined) {
       first = i
     }
-    if (config.API_MAX_RESPONSE_SIZE < size + listing.size || endMinutes.le(listing.minutes)) {
+    if (config.API_MAX_RESPONSE_SIZE < size + listing.size) {
       last = i
       break
     }
@@ -120,14 +77,12 @@ export async function getHandler(coin: string, startTime: string, endTime?: stri
       .slice(first, last)
       .map(async listing => {
         const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
-        const { tweets, ...result } = JSON.parse(buffer!.toString())
-        const twitterRank = computeTwitterRank(tweets)
-        return { twitterRank, tweets, ...result }
+        return JSON.parse(buffer!.toString())
       })
   )
 
-  return last < listings.length && listings[last].minutes.lt(endMinutes)
-    ? { results, nextStartTime: listings[last].minutes.toShortISOString() }
+  return last < listings.length
+    ? { results, nextStartTime: listings[last].objectName }
     : { results }
 }
 
@@ -145,7 +100,7 @@ export class ApiRouter extends HttpRouter {
     if (cachedResponse) {
       return [200, cachedResponse]
     } else {
-      const ret = await getHandler(coin, startTime, endTime)
+      const ret = await getHandler(coin, Number(startTime), Number(endTime))
       mcache.put(cacheKey, ret, 2 * 24 * 60 * 60 * 1000); // Keep for 2 days max
       return [200, ret]
     }
