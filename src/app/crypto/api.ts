@@ -25,8 +25,26 @@ interface ApiResults {
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 
-const FIVE_MIN = 1000 * 60 * 5
-const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN
+const FIVE_MIN_MS = 1000 * 60 * 5
+const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN_MS
+const ONE_HOUR_MS = 1000 * 60 * 60
+
+function getDatapointFrequency(startTimestamp: number, endTimestamp: number) {
+  const diff = endTimestamp - startTimestamp;
+  if (diff <= ONE_HOUR_MS) {
+    return 1
+  } else if (diff <= ONE_HOUR_MS * 2 + FIVE_MIN_MS) {
+    return 2
+  } else if (diff <= ONE_HOUR_MS * 4 + FIVE_MIN_MS) {
+    return 5
+  } else if (diff <= ONE_HOUR_MS * 24 + FIVE_MIN_MS) {
+    return 10
+  } else if (diff <= ONE_HOUR_MS * 24 * 2 + FIVE_MIN_MS) {
+    return 15
+  } else {
+    return 30
+  }
+}
 
 export async function getHandler(coin: string, startTime: number, endTime?: number): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
@@ -35,6 +53,8 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
   const endTimestamp = endTime ? endTime : startTimestamp + 60 * 1000
   assert(startTimestamp <= endTimestamp, `End time: ${endTime} precedes start time: ${startTime}`)
   assert(endTimestamp - startTime < ONE_WEEK_MS, 'More than a week worth of data requested')
+  const dataFrequency = getDatapointFrequency(startTimestamp, endTimestamp)
+
   if (startTimestamp === endTimestamp) {
     return { results: [] }
   }
@@ -46,6 +66,7 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
 
   const listings = (res as ObjectListing[])
       .filter(listing => Number(listing.objectName) >= startTimestamp && Number(listing.objectName) <= endTimestamp)
+      .filter((x, idx) => idx % dataFrequency === 0)
 
   let first: number | undefined
   let last: number | undefined
