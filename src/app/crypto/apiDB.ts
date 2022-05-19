@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as config from './config'
-import { ConverseonSentiment } from './converseon'
 import { assert, counters } from '../../util'
 import { getDynamoDBClient } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
-import mcache from 'memory-cache'
 import { TwitterDynamoDBTweetSentimentTable } from "../../twitter/TwitterDynamoDBTweetSentimentTable"
+import {getDatapointFrequency} from "./utils";
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
@@ -43,9 +42,10 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
     return { results: [] }
   }
 
+  const dataFrequency = getDatapointFrequency(startTimestamp, endTimestamp)
   const results = await tweetSentimentTable.queryTimeRange(coin, startTimestamp, endTimestamp) || []
 
-  return { results }
+  return { results: results.filter((x, idx) => idx % dataFrequency === 0) }
 }
 
 export class ApiRouter extends HttpRouter {
@@ -57,14 +57,7 @@ export class ApiRouter extends HttpRouter {
   public async trends(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
     const [coin, startTime, _, endTime] = req.params!
-    const cacheKey = `${coin}_${startTime}_${endTime}`
-    const cachedResponse = mcache.get(cacheKey)
-    if (cachedResponse) {
-      return [200, cachedResponse]
-    } else {
-      const ret = await getHandler(coin, Number(startTime), Number(endTime))
-      mcache.put(cacheKey, ret, 2 * 24 * 60 * 60 * 1000); // Keep for 2 days max
-      return [200, ret]
-    }
+    const ret = await getHandler(coin, Number(startTime), Number(endTime))
+    return [200, ret]
   }
 }

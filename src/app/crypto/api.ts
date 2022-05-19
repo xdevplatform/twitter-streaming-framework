@@ -5,7 +5,7 @@ import * as config from './config'
 import { assert, counters } from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
-import mcache from 'memory-cache'
+import {getDatapointFrequency, ONE_WEEK_MS } from './utils'
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
@@ -24,27 +24,6 @@ interface ApiResults {
 }
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
-
-const FIVE_MIN_MS = 1000 * 60 * 5
-const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN_MS
-const ONE_HOUR_MS = 1000 * 60 * 60
-
-function getDatapointFrequency(startTimestamp: number, endTimestamp: number) {
-  const diff = endTimestamp - startTimestamp;
-  if (diff <= ONE_HOUR_MS) {
-    return 1
-  } else if (diff <= ONE_HOUR_MS * 2 + FIVE_MIN_MS) {
-    return 2
-  } else if (diff <= ONE_HOUR_MS * 4 + FIVE_MIN_MS) {
-    return 5
-  } else if (diff <= ONE_HOUR_MS * 24 + FIVE_MIN_MS) {
-    return 10
-  } else if (diff <= ONE_HOUR_MS * 24 * 2 + FIVE_MIN_MS) {
-    return 15
-  } else {
-    return 30
-  }
-}
 
 export async function getHandler(coin: string, startTime: number, endTime?: number): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
@@ -115,14 +94,8 @@ export class ApiRouter extends HttpRouter {
   public async trends(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
     const [coin, startTime, _, endTime] = req.params!
-    const cacheKey = `${coin}_${startTime}_${endTime}`
-    const cachedResponse = mcache.get(cacheKey)
-    if (cachedResponse) {
-      return [200, cachedResponse]
-    } else {
-      const ret = await getHandler(coin, Number(startTime), Number(endTime))
-      mcache.put(cacheKey, ret, 2 * 24 * 60 * 60 * 1000); // Keep for 2 days max
-      return [200, ret]
-    }
+
+    const ret = await getHandler(coin, Number(startTime), Number(endTime))
+    return [200, ret]
   }
 }

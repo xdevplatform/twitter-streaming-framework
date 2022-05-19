@@ -26,6 +26,10 @@ export type TwitterRank = {
     }
 }
 
+export const FIVE_MIN_MS = 1000 * 60 * 5
+export const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN_MS
+export const ONE_HOUR_MS = 1000 * 60 * 60
+
 export const scoreOptions = ['positive', 'neutral', 'negative', 'unknown']
 
 const converseon = new Converseon(config.CONVERSEON_API_KEY)
@@ -77,4 +81,21 @@ export async function getDataToStore(streamedTweets: StreamedTweet[], coin = 'bi
         .map(({id}) => id)
     const twitterRank = computeTwitterRank(tweets, sentiments)
     return { timeMs, coin, ...twitterRank, tweetIds, usdRate }
+}
+
+export function getDatapointFrequency(startTimestamp: number, endTimestamp: number) {
+    const diff = endTimestamp - startTimestamp;
+    if (diff <= ONE_HOUR_MS) {
+        return 1
+    } else if (diff <= ONE_HOUR_MS * 2 + FIVE_MIN_MS) {
+        return 2
+    } else if (diff <= ONE_HOUR_MS * 4 + FIVE_MIN_MS) {
+        return 5
+    } else if (diff <= ONE_HOUR_MS * 24 + FIVE_MIN_MS) {
+        return 10
+    } else if (diff <= ONE_HOUR_MS * 24 * 2 + FIVE_MIN_MS) {
+        return 15
+    } else {
+        return 30
+    }
 }
