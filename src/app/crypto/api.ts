@@ -5,27 +5,26 @@ import * as config from './config'
 import { assert, counters } from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
-import {getDatapointFrequency, ONE_WEEK_MS } from './utils'
+import {
+  getCombinedResults,
+  getDatapointFrequency,
+  ONE_WEEK_MS,
+  Result
+} from './utils'
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
 const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
 
-interface Entry {
-  timeMs: number
-  coin: string
-  tweetIds: Array<string>
-  usdRate: number
-}
-
 interface ApiResults {
-  results: Entry[]
+  results: Array<Result>
   nextStartTime?: string
 }
 
 const fos = new FilesystemObjectStore(config.OBJECT_STORE_BASE_PATH)
 
 export async function getHandler(coin: string, startTime: number, endTime?: number): Promise<ApiResults> {
+  console.log('\nHERE\n')
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
 
   const startTimestamp = startTime
@@ -43,10 +42,10 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
     return { results: [] }
   }
 
+  console.log('res', res.length)
   const listings = (res as ObjectListing[])
       .filter(listing => Number(listing.objectName) >= startTimestamp && Number(listing.objectName) <= endTimestamp)
-      .filter((x, idx) => idx % dataFrequency === 0)
-
+  console.log('listings', listings.length)
   let first: number | undefined
   let last: number | undefined
   let size = 0
@@ -76,13 +75,15 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
       .slice(first, last)
       .map(async listing => {
         const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
-        return JSON.parse(buffer!.toString())
+        return JSON.parse(buffer!.toString()) as Result
       })
   )
 
+  const combinedResults = getCombinedResults(results, dataFrequency)
+
   return last < listings.length
-    ? { results, nextStartTime: listings[last].objectName }
-    : { results }
+    ? { results: combinedResults, nextStartTime: listings[last].objectName }
+    : { results: combinedResults }
 }
 
 export class ApiRouter extends HttpRouter {
