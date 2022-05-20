@@ -8,7 +8,7 @@ import querystring from 'querystring'
 import { Obj, sleep } from '../../util'
 import { HttpMethod } from '../HttpProtocol'
 
-const TIMEOUT_MS = 5000
+const TIMEOUT_MS = 10000
 
 const httpAgent = new http.Agent({ keepAlive: true })
 const httpsAgent = new https.Agent({ keepAlive: true })
@@ -94,7 +94,7 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
         timeout = setTimeout(() => {
           timeout = undefined
           if (!code) {
-            reject(new HttpRequestError(`Request timed out after ${timeoutMs} ms`, HttpRequestError.ETIMEOUT))
+            reject(new HttpRequestError(`Request timed out after ${timeoutMs} ms (qurl: ${qurl})`, HttpRequestError.ETIMEOUT))
           }
         }, timeoutMs)
       }
@@ -176,6 +176,6 @@ export async function request(url: string, opts: HttpRequestOpts = {}): Promise<
   const elapsed = Date.now() - start
   throw new HttpRequestError(
     `Request timed out after ${attempts} attempts and ${elapsed} ms (last error code was ${lastError.code})`,
-    HttpRequestError.ETIMEOUT,
+    HttpRequestError.ETIMEOUT
   )
 }
