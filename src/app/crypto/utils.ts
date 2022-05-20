@@ -15,41 +15,34 @@ export type TwitterRank = {
         positive: number
         neutral: number
         negative: number
+        unknown: number
     }
     sentimentByFollowers: {
         positive: number
         neutral: number
         negative: number
+        unknown: number
         totalFollowers: number
     }
 }
-
-export type Entry = {
-    timeMs: number
-    coin: string
-    tweetIds: Array<string>
-    usdRate: number
-}
-
-export type Result = Entry & TwitterRank
 
 export const FIVE_MIN_MS = 1000 * 60 * 5
 export const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN_MS
 export const ONE_HOUR_MS = 1000 * 60 * 60
 
-export const scoreOptions = ['positive', 'neutral', 'negative']
+export const scoreOptions = ['positive', 'neutral', 'negative', 'unknown']
 
 const converseon = new Converseon(config.CONVERSEON_API_KEY)
 
 export function computeTwitterRank(tweets: Array<TweetStored>, sentiments: Array<ConverseonSentiment>): TwitterRank {
-    const defaultValue = {sentiment: {positive: 0, neutral: 0, negative: 0}, sentimentByFollowers: {positive: 0, neutral: 0, negative: 0, totalFollowers: 0}}
+    const defaultValue = {sentiment: {positive: 0, neutral: 0, negative: 0, unknown: 0}, sentimentByFollowers: {positive: 0, neutral: 0, negative: 0, unknown: 0, totalFollowers: 0}}
     if (!tweets || tweets.length === 0) {
-        return {score: 'neutral', scoreByFollowers: 'neutral', ...defaultValue}
+        return {score: 'unknown', scoreByFollowers: 'unknown', ...defaultValue}
     }
     const ranks = tweets.reduce(({sentiment, sentimentByFollowers}, {followers_count}, idx) => {
 
         const tweetSentiment = sentiments[idx]
-        const value = tweetSentiment?.value || 'neutral'
+        const value = tweetSentiment?.value || 'unknown'
 
         return {
             sentiment:{
@@ -105,46 +98,4 @@ export function getDatapointFrequency(startTimestamp: number, endTimestamp: numb
     } else {
         return 30
     }
-}
-
-export function getCombinedResultAveraged(resultA: Result, resultB: Result, frequency = 1) {
-    return {
-        ...resultA,
-        sentiment: {
-            neutral: Math.round((resultA.sentiment.neutral + resultB.sentiment.neutral) / frequency),
-            positive: Math.round((resultA.sentiment.positive + resultB.sentiment.positive) / frequency),
-            negative: Math.round((resultA.sentiment.neutral + resultB.sentiment.negative) / frequency),
-        },
-        sentimentByFollowers: {
-            neutral: Math.round((resultA.sentimentByFollowers.neutral + resultB.sentimentByFollowers.neutral) / frequency),
-            positive: Math.round((resultA.sentimentByFollowers.positive + resultB.sentimentByFollowers.positive) / frequency),
-            negative: Math.round((resultA.sentimentByFollowers.negative + resultB.sentimentByFollowers.negative) / frequency),
-            totalFollowers: Math.round((resultA.sentimentByFollowers.totalFollowers + resultB.sentimentByFollowers.totalFollowers) / frequency),
-        },
-    }
-}
-
-export function getCombinedResults(results: Result[], dataFrequency: number) {
-    let resultsCondensed: Result[] = []
-    let tempCombinedResult: Result|null = results[0]
-    for (let i = results.length - 1; i >= 0; i--) {
-        const currentResult = results[i]
-        if (i % dataFrequency === 0) {
-            if (tempCombinedResult) {
-                tempCombinedResult = getCombinedResultAveraged(tempCombinedResult, currentResult, dataFrequency)
-            } else {
-                tempCombinedResult = currentResult
-            }
-            resultsCondensed = [tempCombinedResult,...resultsCondensed]
-            tempCombinedResult = null
-        } else {
-            if (!tempCombinedResult) {
-                tempCombinedResult = currentResult
-            } else {
-                tempCombinedResult = getCombinedResultAveraged(tempCombinedResult, currentResult)
-            }
-        }
-    }
-
-    return resultsCondensed
 }
