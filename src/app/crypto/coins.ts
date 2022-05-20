@@ -21,27 +21,16 @@ interface Transaction {
 }
 
 async function getLatestCoinToUSDRateOnce(coin: string): Promise<number> {
-  const res = await request(`https://api.coingecko.com/api/v3/coins/${coin}/tickers`)
+  //const res = await request(`https://api.coingecko.com/api/v3/coins/${coin}/tickers`)
+  const response = await request(`https://nomics.com/data/currencies-ticker\?filter\=any\&interval\=1d\&quote-currency\=USD\&symbols\=BTC`)
+  const res = JSON.parse(response as string);
   assert(
-    typeof res === 'object' && Array.isArray(res.tickers) && 0 < res.tickers.length,
-    `Empty coingecko response: ${JSON.stringify(res)}`
+    typeof res === 'object' && Array.isArray(res.items) && 0 < res.items.length,
+    `Empty response: ${JSON.stringify(res)}`
   )
+  const price = (res as any).items.find((item : {id: string; price: string}) => item.id === 'BTC').price;
 
-  const tickers = (res as any).tickers as Ticker[]
-  const txs: Transaction[] = tickers
-    .filter(t =>
-      t.converted_last !== undefined &&
-      t.converted_last.usd !== undefined &&
-      t.converted_volume !== undefined &&
-      t.converted_volume.usd !== undefined &&
-      t.trust_score === 'green'
-    )
-    .map(t => ({ usd: t.converted_last!.usd!, volume: t.converted_volume!.usd! }))
-  assert(0 < txs.length, `No trusted rates in coingecko response: ${JSON.stringify(res)}`)
-
-  const sum = txs.reduce((a, v) => a + v.usd * v.volume, 0)
-  const vol = txs.reduce((a, v) => a + v.volume, 0)
-  return Math.round(sum / vol)
+  return Math.round(Number(price))
 }
 
 export async function getLatestCoinToUSDRate(coin: string): Promise<number> {
