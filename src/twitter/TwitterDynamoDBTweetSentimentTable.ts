@@ -12,7 +12,6 @@ import {
   dynamodDBTimedPrefixSearch,
 } from '../database'
 import {ConverseonSentiment} from "../app/crypto/converseon";
-import {Result} from "../app/crypto/utils";
 
 
 export interface TwitterDynamoDBTweetSentiments {
@@ -51,7 +50,7 @@ export class TwitterDynamoDBTweetSentimentTable extends DynamoDBTable {
     )
   }
 
-  public async queryTimeRange(coin: string, startTime: number, endTime: number): Promise<Result[] | undefined> {
+  public async queryTimeRange(coin: string, startTime: number, endTime: number): Promise<TwitterDynamoDBTweetSentimentRecord[] | undefined> {
     const res = await this.doQueryTimeRange<TwitterDynamoDBTweetSentimentRaw>(coin, startTime.toString(), endTime.toString())
     return res ? res.map(({tweetIds,sentiment,sentimentByFollowers, timeMs, ...rest}) => ({...rest, timeMs: Number(timeMs), tweetIds: JSON.parse(tweetIds),sentiment: JSON.parse(sentiment),sentimentByFollowers: JSON.parse(sentimentByFollowers)})) : undefined
   }
