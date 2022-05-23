@@ -50,7 +50,6 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
 
   const listings = (res as ObjectListing[])
       .filter(listing => Number(listing.objectName) >= startTimestamp && Number(listing.objectName) <= endTimestamp)
-      .filter((x, idx) => idx % dataFrequency === 0)
 
   const results = await Promise.all(
     listings
