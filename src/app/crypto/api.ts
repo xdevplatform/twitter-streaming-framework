@@ -5,7 +5,12 @@ import * as config from './config'
 import { assert, counters } from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
-import {getDatapointFrequency, ONE_WEEK_MS } from './utils'
+import {
+  getCombinedResults,
+  getDatapointFrequency,
+  ONE_WEEK_MS,
+  Result
+} from './utils'
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
@@ -19,7 +24,7 @@ interface Entry {
 }
 
 interface ApiResults {
-  results: Entry[]
+  results: Array<Result>
   nextStartTime?: string
 }
 
@@ -76,13 +81,15 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
       .slice(first, last)
       .map(async listing => {
         const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
-        return JSON.parse(buffer!.toString())
+        return JSON.parse(buffer!.toString()) as Result
       })
   )
 
+  const combinedResults = getCombinedResults(results, dataFrequency)
+
   return last < listings.length
-    ? { results, nextStartTime: listings[last].objectName }
-    : { results }
+    ? { results: combinedResults, nextStartTime: listings[last].objectName }
+    : { results: combinedResults }
 }
 
 export class ApiRouter extends HttpRouter {

@@ -6,7 +6,7 @@ import { assert, counters } from '../../util'
 import { getDynamoDBClient } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import { TwitterDynamoDBTweetSentimentTable } from "../../twitter/TwitterDynamoDBTweetSentimentTable"
-import {getDatapointFrequency} from "./utils";
+import {getCombinedResults, getDatapointFrequency, Result} from "./utils";
 
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
@@ -45,7 +45,9 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
   const dataFrequency = getDatapointFrequency(startTimestamp, endTimestamp)
   const results = await tweetSentimentTable.queryTimeRange(coin, startTimestamp, endTimestamp) || []
 
-  return { results: results.filter((x, idx) => idx % dataFrequency === 0) }
+  const combinedResults = getCombinedResults(results as Result[], dataFrequency)
+
+  return { results: combinedResults }
 }
 
 export class ApiRouter extends HttpRouter {
