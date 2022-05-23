@@ -101,11 +101,11 @@ export function getDatapointFrequency(startTimestamp: number, endTimestamp: numb
     } else if (diff <= ONE_HOUR_MS * 4) {
         return 3
     } else if (diff <= ONE_HOUR_MS * 24) {
-        return 4
+        return 10
     } else if (diff <= ONE_HOUR_MS * 24 * 2) {
-        return 5
+        return 15
     } else {
-        return 6
+        return 30
     }
 }
 
