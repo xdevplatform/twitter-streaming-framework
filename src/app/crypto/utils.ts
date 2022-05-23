@@ -96,16 +96,16 @@ export function getDatapointFrequency(startTimestamp: number, endTimestamp: numb
     const diff = endTimestamp - startTimestamp;
     if (diff <= ONE_HOUR_MS) {
         return 1
-    } else if (diff <= ONE_HOUR_MS * 2 + FIVE_MIN_MS) {
+    } else if (diff <= ONE_HOUR_MS * 2) {
         return 2
-    } else if (diff <= ONE_HOUR_MS * 4 + FIVE_MIN_MS) {
+    } else if (diff <= ONE_HOUR_MS * 4) {
+        return 3
+    } else if (diff <= ONE_HOUR_MS * 24) {
+        return 4
+    } else if (diff <= ONE_HOUR_MS * 24 * 2) {
         return 5
-    } else if (diff <= ONE_HOUR_MS * 24 + FIVE_MIN_MS) {
-        return 10
-    } else if (diff <= ONE_HOUR_MS * 24 * 2 + FIVE_MIN_MS) {
-        return 15
     } else {
-        return 30
+        return 6
     }
 }
 
