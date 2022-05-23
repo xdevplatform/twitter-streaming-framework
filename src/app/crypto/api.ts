@@ -52,33 +52,8 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
       .filter(listing => Number(listing.objectName) >= startTimestamp && Number(listing.objectName) <= endTimestamp)
       .filter((x, idx) => idx % dataFrequency === 0)
 
-  let first: number | undefined
-  let last: number | undefined
-  let size = 0
-
-  for (let i = 0; i < listings.length; i++) {
-    const listing = listings[i]
-    if (first === undefined) {
-      first = i
-    }
-    if (config.API_MAX_RESPONSE_SIZE < size + listing.size) {
-      last = i
-      break
-    }
-    size += listing.size
-  }
-
-  if (first === last) {
-    return { results: [] }
-  }
-
-  if (last === undefined) {
-    last = listings.length
-  }
-
   const results = await Promise.all(
     listings
-      .slice(first, last)
       .map(async listing => {
         const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
         return JSON.parse(buffer!.toString()) as Result
@@ -87,9 +62,7 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
 
   const combinedResults = getCombinedResults(results, dataFrequency)
 
-  return last < listings.length
-    ? { results: combinedResults, nextStartTime: listings[last].objectName }
-    : { results: combinedResults }
+  return { results: combinedResults }
 }
 
 export class ApiRouter extends HttpRouter {
