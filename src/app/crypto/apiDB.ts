@@ -3,7 +3,7 @@
 
 import * as config from './config'
 import { assert, counters } from '../../util'
-import { getDynamoDBClient } from '../../database'
+import {getDynamoDBClient, ObjectListing} from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import { TwitterDynamoDBTweetSentimentTable } from "../../twitter/TwitterDynamoDBTweetSentimentTable"
 import {getCombinedResults, getDatapointFrequency, Result} from "./utils";
@@ -11,6 +11,7 @@ import {getCombinedResults, getDatapointFrequency, Result} from "./utils";
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
 const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
+const URL_LATEST_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/latest\/(\d+)?\/?$`)
 
 interface Entry {
   timeMs: number
@@ -50,6 +51,19 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
   return { results: combinedResults }
 }
 
+export async function getLatestHandler(coin: string, frequency = 1): Promise<ApiResults> {
+  assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
+
+  const endTimestamp = new Date().getTime()
+  const startTimestamp = endTimestamp - (frequency + 2) * 60 * 1000
+
+  const results = (await tweetSentimentTable.queryTimeRange(coin, startTimestamp, endTimestamp) || []) as Result[]
+
+  const combinedResults = getCombinedResults(results.slice(-frequency), frequency)
+
+  return { results: combinedResults }
+}
+
 export class ApiRouter extends HttpRouter {
   constructor() {
     super({ cors: true })
@@ -60,6 +74,15 @@ export class ApiRouter extends HttpRouter {
     counters.info.requests.trends.inc()
     const [coin, startTime, _, endTime] = req.params!
     const ret = await getHandler(coin, Number(startTime), Number(endTime))
+    return [200, ret]
+  }
+
+  @httpRouterMethod('GET', URL_LATEST_REGEX)
+  public async trendLatest(req: HttpRouterRequest) {
+    counters.info.requests.trends.inc()
+    const [coin, frequency] = req.params!
+
+    const ret = await getLatestHandler(coin, Number(frequency))
     return [200, ret]
   }
 }

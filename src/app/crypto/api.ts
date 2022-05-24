@@ -15,6 +15,7 @@ import {
 const COIN_REGEX_STR = '[a-z]+'
 const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
 const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
+const URL_LATEST_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/latest\/(\d+)?\/?$`)
 
 interface Entry {
   timeMs: number
@@ -64,6 +65,27 @@ export async function getHandler(coin: string, startTime: number, endTime?: numb
   return { results: combinedResults }
 }
 
+export async function getLatestHandler(coin: string, frequency = 1): Promise<ApiResults> {
+  const res = await fos.listObjects(config.OBJECT_STORE_BUCKET_NAME)
+  if (res === undefined) {
+    return { results: [] }
+  }
+
+  const listings = (res as ObjectListing[]).slice(-frequency)
+
+  const results = await Promise.all(
+      listings
+          .map(async listing => {
+            const buffer = await fos.getObject(config.OBJECT_STORE_BUCKET_NAME, listing.objectName)
+            return JSON.parse(buffer!.toString()) as Result
+          })
+  )
+
+  const combinedResults = getCombinedResults(results, frequency)
+
+  return { results: combinedResults }
+}
+
 export class ApiRouter extends HttpRouter {
   constructor() {
     super({ cors: true })
@@ -75,6 +97,15 @@ export class ApiRouter extends HttpRouter {
     const [coin, startTime, _, endTime] = req.params!
 
     const ret = await getHandler(coin, Number(startTime), Number(endTime))
+    return [200, ret]
+  }
+
+  @httpRouterMethod('GET', URL_LATEST_REGEX)
+  public async trendLatest(req: HttpRouterRequest) {
+    counters.info.requests.trends.inc()
+    const [coin, frequency] = req.params!
+
+    const ret = await getLatestHandler(coin, Number(frequency))
     return [200, ret]
   }
 }
