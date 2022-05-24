@@ -6,23 +6,14 @@ import { assert, counters } from '../../util'
 import { FilesystemObjectStore, ObjectListing } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import {
+  COIN_REGEX,
   getCombinedResults,
   getDatapointFrequency,
   ONE_WEEK_MS,
-  Result
+  Result,
+  URL_LATEST_REGEX,
+  URL_REGEX
 } from './utils'
-
-const COIN_REGEX_STR = '[a-z]+'
-const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
-const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
-const URL_LATEST_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/latest\/(\d+)?\/?$`)
-
-interface Entry {
-  timeMs: number
-  coin: string
-  tweetIds: Array<string>
-  usdRate: number
-}
 
 interface ApiResults {
   results: Array<Result>
@@ -70,8 +61,7 @@ export async function getLatestHandler(coin: string, frequency = 1): Promise<Api
   if (res === undefined) {
     return { results: [] }
   }
-
-  const listings = (res as ObjectListing[]).slice(-frequency)
+  const listings = (res as ObjectListing[]).slice(-1 * frequency)
 
   const results = await Promise.all(
       listings
@@ -103,7 +93,7 @@ export class ApiRouter extends HttpRouter {
   @httpRouterMethod('GET', URL_LATEST_REGEX)
   public async trendLatest(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
-    const [coin, frequency] = req.params!
+    const [coin, _, frequency = 1] = req.params!
 
     const ret = await getLatestHandler(coin, Number(frequency))
     return [200, ret]

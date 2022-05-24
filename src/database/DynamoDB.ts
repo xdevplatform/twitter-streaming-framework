@@ -154,7 +154,6 @@ export abstract class DynamoDBTable {
         })
       )
     } catch (e) {
-      console.log('\n\n\n\n'+e+'\n\n\n\n')
       counters.error.DynamoDB.writeErrors.inc()
       console.error(e)
     }

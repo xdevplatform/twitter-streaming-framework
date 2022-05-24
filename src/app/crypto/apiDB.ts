@@ -3,15 +3,10 @@
 
 import * as config from './config'
 import { assert, counters } from '../../util'
-import {getDynamoDBClient, ObjectListing} from '../../database'
+import { getDynamoDBClient } from '../../database'
 import { HttpRouter, httpRouterMethod, HttpRouterRequest } from '../../http'
 import { TwitterDynamoDBTweetSentimentTable } from "../../twitter/TwitterDynamoDBTweetSentimentTable"
-import {getCombinedResults, getDatapointFrequency, Result} from "./utils";
-
-const COIN_REGEX_STR = '[a-z]+'
-const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
-const URL_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
-const URL_LATEST_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/latest\/(\d+)?\/?$`)
+import { COIN_REGEX, getCombinedResults, getDatapointFrequency, ONE_WEEK_MS, Result, URL_LATEST_REGEX, URL_REGEX } from "./utils"
 
 interface Entry {
   timeMs: number
@@ -28,9 +23,6 @@ interface ApiResults {
 
 const dynamoDBClient = getDynamoDBClient(config.AWS_REGION);
 const tweetSentimentTable = new TwitterDynamoDBTweetSentimentTable(dynamoDBClient, config.CRYPTO_SENTIMENT_TABLE_NAME);
-
-const FIVE_MIN = 1000 * 60 * 5
-const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN
 
 export async function getHandler(coin: string, startTime: number, endTime?: number): Promise<ApiResults> {
   assert(COIN_REGEX.test(coin), `Invalid coin: ${coin}`)
@@ -80,7 +72,7 @@ export class ApiRouter extends HttpRouter {
   @httpRouterMethod('GET', URL_LATEST_REGEX)
   public async trendLatest(req: HttpRouterRequest) {
     counters.info.requests.trends.inc()
-    const [coin, frequency] = req.params!
+    const [coin, _, frequency = 1] = req.params!
 
     const ret = await getLatestHandler(coin, Number(frequency))
     return [200, ret]

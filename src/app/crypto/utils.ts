@@ -35,6 +35,11 @@ export type Result = Entry & TwitterRank
 
 export type ResultMapped = Entry & TwitterRank & { tweetCount: number }
 
+export const COIN_REGEX_STR = '[a-z]+'
+export const COIN_REGEX = new RegExp(`^${COIN_REGEX_STR}$`)
+export const URL_REGEX =        new RegExp(`^\/(${COIN_REGEX_STR})\/(\\d+)(\/(\\d+))?\/?$`)
+export const URL_LATEST_REGEX = new RegExp(`^\/(${COIN_REGEX_STR})\/latest(\/(\\d+))?\/?$`)
+
 export const FIVE_MIN_MS = 1000 * 60 * 5
 export const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7 + FIVE_MIN_MS
 export const ONE_HOUR_MS = 1000 * 60 * 60
